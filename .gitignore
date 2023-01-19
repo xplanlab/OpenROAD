@@ -29,7 +29,7 @@ flow
 docs/main
 
 .idea/
-cmake-build-debug/
+cmake-build-*/
 
 coverage-output
 messages.txt
