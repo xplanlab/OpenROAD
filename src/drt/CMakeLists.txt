@@ -47,6 +47,7 @@ check_ipo_supported(RESULT ipo_supported OUTPUT error)
 find_package(Boost REQUIRED COMPONENTS serialization)
 find_package(OpenMP REQUIRED)
 find_package(VTune)
+find_package(cppzmq REQUIRED)
 
 swig_lib(NAME      drt
          NAMESPACE drt
@@ -151,6 +152,7 @@ target_link_libraries(drt
     OpenMP::OpenMP_CXX
     ${Boost_LIBRARIES}
     ZLIB::ZLIB
+    cppzmq
 )
 
 messages(

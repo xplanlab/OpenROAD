@@ -119,6 +119,28 @@ _installCommonDev() {
         echo "spdlog already installed."
     fi
 
+    # zeromq
+    if [[ ! -d /usr/local/lib/cmake/ZeroMQ/ ]]; then
+        cd "${baseDir}"
+        git clone https://github.com/zeromq/libzmq.git
+        cd libzmq
+        cmake -B build .
+        cmake --build build -j $(nproc) --target install
+    else
+        echo "ZeroMQ already installed."
+    fi
+
+    # cppzmq
+    if [[ ! -d /usr/local/share/cmake/cppzmq/ ]]; then
+      cd "${baseDir}"
+      git clone https://github.com/zeromq/cppzmq.git
+      cd cppzmq
+      cmake -B build .
+      cmake --build build -j $(nproc) --target install
+    else
+        echo "cppzmq already installed."
+    fi
+
     cd "${lastDir}"
     rm -rf "${baseDir}"
 }
