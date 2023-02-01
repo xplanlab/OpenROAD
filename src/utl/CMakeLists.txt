@@ -69,6 +69,7 @@ target_sources(utl
     src/LoggerCommon.cpp
     src/MakeLogger.cpp
     src/Metrics.cpp
+    src/MQ.cpp
 )
   
 target_include_directories(utl
