@@ -27,9 +27,9 @@ void MQ::sendMessage(const std::string& message)
   socket_.send(zmq::buffer(data), zmq::send_flags::none);
 
   // wait for reply from server
-  zmq::message_t reply{};
-  socket_.recv(reply, zmq::recv_flags::none);
-  std::cout << "Received: " << reply.to_string() << std::endl;
+//  zmq::message_t reply{};
+//  socket_.recv(reply, zmq::recv_flags::none);
+//  std::cout << "Received: " << reply.to_string() << std::endl;
 }
 
 }
