@@ -141,6 +141,17 @@ _installCommonDev() {
         echo "cppzmq already installed."
     fi
 
+    # nlohmann_json
+    if [[ ! -d /usr/local/share/cmake/nlohmann_json/ ]]; then
+      cd "${baseDir}"
+      git clone https://github.com/nlohmann/json.git
+      cd json
+      cmake -B build .
+      cmake --build build -j $(nproc) --target install
+    else
+        echo "nlohmann_json already installed."
+    fi
+
     cd "${lastDir}"
     rm -rf "${baseDir}"
 }

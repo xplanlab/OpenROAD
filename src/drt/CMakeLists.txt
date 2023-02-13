@@ -47,7 +47,8 @@ check_ipo_supported(RESULT ipo_supported OUTPUT error)
 find_package(Boost REQUIRED COMPONENTS serialization)
 find_package(OpenMP REQUIRED)
 find_package(VTune)
-find_package(cppzmq REQUIRED)
+find_package(cppzmq 4.9.0 REQUIRED)
+find_package(nlohmann_json 3.11.2 REQUIRED)
 
 swig_lib(NAME      drt
          NAMESPACE drt
@@ -129,6 +130,7 @@ target_sources(drt
     src/MakeTritonRoute.cpp
     src/frBaseTypes.cpp
     src/DesignCallBack.cpp
+    src/xr/tool.cpp
 )
 
 target_include_directories(drt
@@ -153,6 +155,7 @@ target_link_libraries(drt
     ${Boost_LIBRARIES}
     ZLIB::ZLIB
     cppzmq
+    nlohmann_json::nlohmann_json
 )
 
 messages(
