@@ -1745,51 +1745,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  // 用于统计重布线次数
-  int netCount = rerouteQueue.size();
-  int routeCount = 0;
-
   while (!rerouteQueue.empty()) {
-    // 用于验证 nets、pins、aps 下标在某次 iter 中是否固定
-//    if (routeBox_.intersects({253800, 271130})) {
-//      utl::myLogger(" ===== ");
-//      utl::myLogger("routeBox: ({}, {}, {}, {})", routeBox_.xMin(), routeBox_.yMin(), routeBox_.xMax(), routeBox_.yMax());
-//
-//      if (nets_.size() > 0) {
-//        utl::myLogger("net0: {}", nets_[0]->getFrNet()->getName());
-//      }
-//
-//      if (nets_.size() > 2) {
-//        utl::myLogger("net0: {}", nets_[2]->getFrNet()->getName());
-//
-//        for (auto& pin : nets_[2]->getPins()) {
-//          for (auto& ap : pin->getAccessPatterns()) {
-//            utl::myLogger("net2 ap: ({}, {}, {})", ap->getPoint().x(),
-//                          ap->getPoint().y(), ap->getBeginLayerNum());
-//          }
-//        }
-//      }
-//
-//      if (nets_.size() > 4) {
-//        utl::myLogger("net0: {}", nets_[4]->getFrNet()->getName());
-//      }
-//
-//      if (nets_.size() > 6) {
-//        utl::myLogger("net0: {}", nets_[6]->getFrNet()->getName());
-//      }
-//
-//      if (nets_.size() > 8) {
-//        utl::myLogger("net0: {}", nets_[8]->getFrNet()->getName());
-//
-//        for (auto& pin : nets_[8]->getPins()) {
-//          for (auto& ap : pin->getAccessPatterns()) {
-//            utl::myLogger("net2 ap: ({}, {}, {})", ap->getPoint().x(),
-//                          ap->getPoint().y(), ap->getBeginLayerNum());
-//          }
-//        }
-//      }
-//    }
-
     if (getDRIter() ==  0) {
       xroute_dump();
     }
@@ -1835,7 +1791,6 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       // route
       mazeNetInit(net);
       bool isRouted = routeNet(net);
-      routeCount++; // 用于统计重布线次数
       if (isRouted == false) {
         if (OUT_MAZE_FILE == string("")) {
           if (VERBOSE > 0) {
@@ -1935,11 +1890,6 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       }
     }
   }
-
-  // 用于统计重布线次数
-//  if (getDRIter() == 0 && routeBox_.intersects({253800, 271130})) {
-//    utl::myLogger("netCount: {}, routeCount: {}, rerouteCount: {}", netCount, routeCount, routeCount - netCount);
-//  }
 }
 
 void FlexDRWorker::modEolCosts_poly(gcPin* shape,
