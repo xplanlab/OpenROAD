@@ -35,6 +35,7 @@
 #include "FlexMazeTypes.h"
 #include "db/drObj/drPin.h"
 #include "dr/FlexWavefront.h"
+#include "xr/xrType.h"
 #include "frBaseTypes.h"
 #include "frDesign.h"
 
@@ -109,6 +110,16 @@ class FlexGridGraph
     } else {
       return false;
     }
+  }
+  // unsafe access, no check
+  bool isAllBlocked(frMIdx x, frMIdx y, frMIdx z) const
+  {
+    const Node& node = nodes_[getIdx(x, y, z)];
+
+    return (node.isBlockedEast && node.isBlockedNorth && node.isBlockedUp
+            && isBlocked(x, y, z, frDirEnum::W)
+            && isBlocked(x, y, z, frDirEnum::S)
+            && isBlocked(x, y, z, frDirEnum::D));
   }
   // unsafe access, no check
   bool isSVia(frMIdx x, frMIdx y, frMIdx z) const
@@ -921,6 +932,57 @@ class FlexGridGraph
     cout << "markerCostVia " << n.markerCostVia << "\n";
     cout << "fixedShapeCostVia " << n.fixedShapeCostVia << "\n";
     cout << "fixedShapeCostPlanar " << n.fixedShapeCostPlanar << "\n";
+  }
+
+  xr::xrData dump()
+  {
+    int xDim, yDim, zDim;
+    getDim(xDim, yDim, zDim);
+    xr::xrDim dim{xDim, yDim, zDim};
+
+    xr::xrNodes nodes;
+    for (int z = 0; z < zDim; z++) {
+      auto lNum = getLayerNum(z);
+      auto layer = getTech()->getLayer(lNum);
+
+      for (int y = 0; y < yDim; y++) {
+        for (int x = 0; x < xDim; x++) {
+          xr::xrNodeMIdx mIdx{x, y, z};
+
+          Point pt;
+          getPoint(pt, x, y);
+          xr::xrNodeCoord coords{pt.x(), pt.y(), getZHeight(z)};
+
+          int isBlockage = isAllBlocked(x, y, z);
+          int usage = isBlockage ? 1 : 0;
+          int type = isBlockage ? -1 : 0;
+          int pin = -1;
+          xr::xrNodeDetail detail{usage, type, pin};
+
+          xr::xrNodeCost costs;
+//          frDirEnum frDirEnumAllCustom[] = {frDirEnum::E,
+//                                      frDirEnum::S,
+//                                      frDirEnum::W,
+//                                      frDirEnum::N,
+//                                      frDirEnum::U,
+//                                      frDirEnum::D};
+//          for (const auto dir : frDirEnumAllCustom) {
+//            int cost = -1;
+//            if (hasEdge(x, y, z, dir)) {
+//              // TODO: 参照 src/drt/src/dr/FlexGridGraph_maze.cpp:L436，那里有区分 NDR，因不清楚作用，所以暂时忽略
+//              cost = getCosts(x, y, z, dir, layer);
+//            }
+//            costs.push_back(cost);
+//          }
+
+          xr::xrNode node{mIdx, coords, detail, costs};
+          nodes.push_back(node);
+        }
+      }
+    }
+
+    xr::xrData data{dim, nodes};
+    return data;
   }
 
  private:

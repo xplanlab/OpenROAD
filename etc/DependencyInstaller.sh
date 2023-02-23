@@ -133,7 +133,7 @@ _installCommonDev() {
     # cppzmq
     if [[ ! -d /usr/local/share/cmake/cppzmq/ ]]; then
       cd "${baseDir}"
-      git clone https://github.com/zeromq/cppzmq.git
+      git clone --depth 1 --branch v4.8.1 https://github.com/zeromq/cppzmq.git
       cd cppzmq
       cmake -B build .
       cmake --build build -j $(nproc) --target install
@@ -144,7 +144,7 @@ _installCommonDev() {
     # nlohmann_json
     if [[ ! -d /usr/local/share/cmake/nlohmann_json/ ]]; then
       cd "${baseDir}"
-      git clone https://github.com/nlohmann/json.git
+      git clone --depth 1 --branch v3.11.2 https://github.com/nlohmann/json.git
       cd json
       cmake -B build .
       cmake --build build -j $(nproc) --target install

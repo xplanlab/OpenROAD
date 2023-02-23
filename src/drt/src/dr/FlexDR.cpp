@@ -517,6 +517,7 @@ void FlexDR::searchRepair(const SearchRepairArgs& args)
   auto& xgp = gCellPatterns.at(0);
   auto& ygp = gCellPatterns.at(1);
   int cnt = 0;
+  // Clip 的总量
   int tot = (((int) xgp.getCount() - 1 - offset) / size + 1)
             * (((int) ygp.getCount() - 1 - offset) / size + 1);
   int prev_perc = 0;
@@ -527,6 +528,8 @@ void FlexDR::searchRepair(const SearchRepairArgs& args)
 
   getBatchInfo(batchStepX, batchStepY);
 
+  // 将不相邻的 clip 划分到统一队列中处理，假设有 3 * 3 大小的 clip，则 clip 在队列中的顺序为：
+  // { { { (0, 0), (0, 2), (2, 0), (2, 2) } }, { { (0, 1), (2, 1) } }, { { (1, 0), (1, 2) } }, { { (1, 1) } } }
   vector<vector<vector<unique_ptr<FlexDRWorker>>>> workers(batchStepX
                                                            * batchStepY);
 

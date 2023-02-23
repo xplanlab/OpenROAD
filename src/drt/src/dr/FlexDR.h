@@ -738,6 +738,12 @@ class FlexDRWorker
   // DRC
   void initMarkers(const frDesign* design);
 
+  // xroute
+  void xroute_setUsedPoints(xr::xrData& data,
+                            FlexMazeIdx beginMazeIdx,
+                            FlexMazeIdx endMazeIdx);
+  void xroute_dump();
+
   // route_queue
   void route_queue();
   void route_queue_main(std::queue<RouteQueueEntry>& rerouteQueue);

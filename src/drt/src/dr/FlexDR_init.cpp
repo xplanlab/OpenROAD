@@ -1944,11 +1944,13 @@ void FlexDRWorker::initTrackCoords_pin(
       //     // }
       //   }
       // }
+      // 在所在层上放置边
       if (getTech()->getLayer(lNum)->getDir() == dbTechLayerDir::HORIZONTAL) {
         yMap[pt.y()][lNum] = nullptr;
       } else {
         xMap[pt.x()][lNum] = nullptr;
       }
+      // 在其中一个相邻层上放置边
       if (getTech()->getLayer(lNum2)->getDir() == dbTechLayerDir::HORIZONTAL) {
         yMap[pt.y()][lNum2] = nullptr;
       } else {
@@ -2042,13 +2044,14 @@ void FlexDRWorker::initMazeIdx_connFig(drConnFig* connFig)
 
 void FlexDRWorker::initMazeIdx_ap(drAccessPattern* ap)
 {
-  Point bp = ap->getPoint();
+  Point bp = ap->getPoint(); // 不同层的 ap 所用的坐标系都是同向的（）↑→
   auto lNum = ap->getBeginLayerNum();
-  if (gridGraph_.hasMazeIdx(bp, lNum)) {
+  if (gridGraph_.hasMazeIdx(bp, lNum)) { // 二分查询 nCoords 上是否有对应的 track（因为 GridGraph 是压平了二维网格，所以意味着所有层都用同个方向的 x-y 坐标系）
     FlexMazeIdx bi;
-    gridGraph_.getMazeIdx(bi, bp, lNum);
-    ap->setMazeIdx(bi);
+    gridGraph_.getMazeIdx(bi, bp, lNum);  // 获取该 ap 对应的 mazeIdx
+    ap->setMazeIdx(bi); // 保存到 ap 对象中
     // set curr layer on track status
+    // 根据 node 的 hasGridCost 来设置 ap 的 onTrack_ 标志
     if (getTech()->getLayer(lNum)->getDir() == dbTechLayerDir::HORIZONTAL) {
       if (gridGraph_.hasGridCost(bi.x(), bi.y(), bi.z(), frDirEnum::W)
           || gridGraph_.hasGridCost(bi.x(), bi.y(), bi.z(), frDirEnum::E)) {
@@ -2822,11 +2825,13 @@ void FlexDRWorker::initMazeCost_fixedObj(const frDesign* design)
   frRegionQuery::Objects<frBlockObject> result;
   frMIdx zIdx = 0;
   map<frNet*, set<frBlockObject*>> frNet2Terms;
+  // 遍历所有层
   for (auto layerNum = getTech()->getBottomLayerNum();
        layerNum <= getTech()->getTopLayerNum();
        ++layerNum) {
     bool isRoutingLayer = true;
     result.clear();
+    // 如果当前层为布线层或者底下一层是布线层，保存布线层的 mazeZIdx
     if (getTech()->getLayer(layerNum)->getType() == dbTechLayerType::ROUTING) {
       isRoutingLayer = true;
       zIdx = gridGraph_.getMazeZIdx(layerNum);
@@ -2845,6 +2850,8 @@ void FlexDRWorker::initMazeCost_fixedObj(const frDesign* design)
     }
     design->getRegionQuery()->query(getExtBox(), layerNum, result);
     // process blockage first, then unblock based on pin shape
+    // 先处理 blockage，再根据 pin 的形状解除 blockage
+    // Macro Obstruction Statement @ lefdefref.pdf:p136
     for (auto& [box, obj] : result) {
       if (obj->typeId() == frcBlockage) {
         if (isRoutingLayer) {

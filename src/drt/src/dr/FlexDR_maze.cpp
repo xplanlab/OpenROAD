@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <boost/polygon/polygon.hpp>
 #include <chrono>
+#include <nlohmann/json.hpp>
 #include <random>
 #include <sstream>
 
@@ -36,8 +37,10 @@
 #include "db/gcObj/gcPin.h"
 #include "dr/FlexDR.h"
 #include "dr/FlexDR_graphics.h"
-#include "frProfileTask.h"
 #include "gc/FlexGC.h"
+#include "xr/xrType.h"
+#include "utl/MQ.h"
+#include "utl/MyLogger.h"
 
 using namespace std;
 using namespace fr;
@@ -1660,10 +1663,137 @@ void FlexDRWorker::identifyCongestionLevel()
   }
 }
 
+void FlexDRWorker::xroute_setUsedPoints(xr::xrData& data,
+                                        FlexMazeIdx beginMazeIdx,
+                                        FlexMazeIdx endMazeIdx)
+{
+  int z = beginMazeIdx.z();
+
+  if (beginMazeIdx.x() == endMazeIdx.x()) {
+    int x = beginMazeIdx.x();
+    for (int y = beginMazeIdx.y(); y <= endMazeIdx.y(); y++) {
+      int idx = gridGraph_.getIdx(x, y, z);
+      xr::xrNode& node = data.nodes[idx];
+      node.detail[0] = 1;
+    }
+  } else if (beginMazeIdx.y() == endMazeIdx.y()) {
+    int y = beginMazeIdx.y();
+    for (int x = beginMazeIdx.x(); x <= endMazeIdx.x(); x++) {
+      int idx = gridGraph_.getIdx(x, y, z);
+      xr::xrNode& node = data.nodes[idx];
+      node.detail[0] = 1;
+    }
+  }
+}
+
+void FlexDRWorker::xroute_dump()
+{
+  // 获取 gridGraph 的数据
+  xr::xrData data = gridGraph_.dump();
+
+  unsigned long wireLength = 0;
+  unsigned long vias = 0;
+
+  // 获取当前 drWorker 所有 nets 的信息
+  int netIdx = 0;
+  for (auto& net : getNets()) {
+    netIdx++;
+
+    int pinIdx = 0;
+    for (auto& pin : net->getPins()) {
+      pinIdx++;
+
+      for (auto& ap : pin->getAccessPatterns()) {
+        FlexMazeIdx mi = ap->getMazeIdx();
+        int idx = gridGraph_.getIdx(mi.x(), mi.y(), mi.z());
+        xr::xrNode& node = data.nodes[idx];
+        node.detail[1] = netIdx;
+        node.detail[2] = pinIdx;
+      }
+    }
+
+    for (auto& connFig : net->getRouteConnFigs()) {
+      if (connFig->typeId() == drcPathSeg) {
+        auto pathSeg = static_cast<drPathSeg*>(connFig.get());
+
+        // 记录已使用的点
+        FlexMazeIdx beginMazeIdx, endMazeIdx;
+        std::tie(beginMazeIdx, endMazeIdx) = pathSeg->getMazeIdx();
+        xroute_setUsedPoints(data, beginMazeIdx, endMazeIdx);
+
+        // 记录线长
+        auto [bp, ep] = pathSeg->getPoints();
+        frCoord pathSegLen = Point::manhattanDistance(ep, bp);
+        wireLength += pathSegLen;
+      } else if (connFig->typeId() == drcVia) {
+        // 记录过孔数量
+        vias++;
+      }
+    }
+
+    unsigned long violation = getNumMarkers();
+    xr::xrReward reward{violation, wireLength, vias};
+    data.reward = reward;
+  }
+
+  nlohmann::json j = data;
+  utl::MQ mq{"tcp://127.0.0.1:5555"};
+  mq.sendMessage(j.dump());
+}
+
 void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
+
+  // 用于统计重布线次数
+  int netCount = rerouteQueue.size();
+  int routeCount = 0;
+
   while (!rerouteQueue.empty()) {
+    // 用于验证 nets、pins、aps 下标在某次 iter 中是否固定
+//    if (routeBox_.intersects({253800, 271130})) {
+//      utl::myLogger(" ===== ");
+//      utl::myLogger("routeBox: ({}, {}, {}, {})", routeBox_.xMin(), routeBox_.yMin(), routeBox_.xMax(), routeBox_.yMax());
+//
+//      if (nets_.size() > 0) {
+//        utl::myLogger("net0: {}", nets_[0]->getFrNet()->getName());
+//      }
+//
+//      if (nets_.size() > 2) {
+//        utl::myLogger("net0: {}", nets_[2]->getFrNet()->getName());
+//
+//        for (auto& pin : nets_[2]->getPins()) {
+//          for (auto& ap : pin->getAccessPatterns()) {
+//            utl::myLogger("net2 ap: ({}, {}, {})", ap->getPoint().x(),
+//                          ap->getPoint().y(), ap->getBeginLayerNum());
+//          }
+//        }
+//      }
+//
+//      if (nets_.size() > 4) {
+//        utl::myLogger("net0: {}", nets_[4]->getFrNet()->getName());
+//      }
+//
+//      if (nets_.size() > 6) {
+//        utl::myLogger("net0: {}", nets_[6]->getFrNet()->getName());
+//      }
+//
+//      if (nets_.size() > 8) {
+//        utl::myLogger("net0: {}", nets_[8]->getFrNet()->getName());
+//
+//        for (auto& pin : nets_[8]->getPins()) {
+//          for (auto& ap : pin->getAccessPatterns()) {
+//            utl::myLogger("net2 ap: ({}, {}, {})", ap->getPoint().x(),
+//                          ap->getPoint().y(), ap->getBeginLayerNum());
+//          }
+//        }
+//      }
+//    }
+
+    if (getDRIter() ==  0) {
+      xroute_dump();
+    }
+
     auto& entry = rerouteQueue.front();
     frBlockObject* obj = entry.block;
     bool doRoute = entry.doRoute;
@@ -1705,6 +1835,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       // route
       mazeNetInit(net);
       bool isRouted = routeNet(net);
+      routeCount++; // 用于统计重布线次数
       if (isRouted == false) {
         if (OUT_MAZE_FILE == string("")) {
           if (VERBOSE > 0) {
@@ -1804,6 +1935,11 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       }
     }
   }
+
+  // 用于统计重布线次数
+//  if (getDRIter() == 0 && routeBox_.intersects({253800, 271130})) {
+//    utl::myLogger("netCount: {}, routeCount: {}, rerouteCount: {}", netCount, routeCount, routeCount - netCount);
+//  }
 }
 
 void FlexDRWorker::modEolCosts_poly(gcPin* shape,
@@ -2142,7 +2278,7 @@ void FlexDRWorker::routeNet_postAstarUpdate(
     auto mi = path[0];
     vector<drPin*> tmpPins;
     for (auto pin : mazeIdx2unConnPins[mi]) {
-      tmpPins.push_back(pin);
+      tmpPins.push_back(pin); // 一个 node 可能有多个 pin
     }
     for (auto pin : tmpPins) {
       unConnPins.erase(pin);

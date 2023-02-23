@@ -183,9 +183,12 @@ void FlexGridGraph::initEdges(
   // initialize grid graph
   frMIdx xIdx = 0, yIdx = 0, zIdx = 0;
   dieBox_ = design->getTopBlock()->getDieBox();
+
+  // 按层初始化 nodes_ 的边，注意，尽管 zMap 不包含 Cut Layer，但层号却计入了 Cut Layer，所以后面的层号 ±2 都是在指首选方向不同的相邻层
   for (const auto& [layerNum, dir] : zMap) {
     frLayerNum nonPrefLayerNum;
     const auto layer = getTech()->getLayer(layerNum);
+    // 将相邻层作为非首选层
     if (layerNum + 2 <= getTech()->getTopLayerNum()) {
       nonPrefLayerNum = layerNum + 2;
     } else if (layerNum - 2 >= getTech()->getBottomLayerNum()) {
@@ -194,10 +197,12 @@ void FlexGridGraph::initEdges(
       nonPrefLayerNum = layerNum;
     }
     yIdx = 0;
+
+    // ySubMap 为在对应坐标上有边的层其 track pattern 所构成的 map（"72770": { "2": { "numTracks_": 51, "trackSpacing_": 380, "layerNum_": 6 ... } }）
     for (auto& [yCoord, ySubMap] : yMap) {
-      auto yIt = ySubMap.find(layerNum);
-      auto yIt2 = ySubMap.find(layerNum + 2);
-      auto yIt3 = ySubMap.find(nonPrefLayerNum);
+      auto yIt = ySubMap.find(layerNum);  // 看看当前层在这个坐标上有没有边，iterator 为 <int layerNum, frTrackPattern* tp>
+      auto yIt2 = ySubMap.find(layerNum + 2); // 看看相邻上层上有没有边（当当前层方向是 V，那么相邻层的 H 方向如果有边，就可以 Via）
+      auto yIt3 = ySubMap.find(nonPrefLayerNum);  // 非首选层上有没有边
       bool yFound = (yIt != ySubMap.end());
       bool yFound2 = (yIt2 != ySubMap.end());
       bool yFound3 = (yIt3 != ySubMap.end());
@@ -212,20 +217,20 @@ void FlexGridGraph::initEdges(
         // add cost to out-of-die edge
         bool isOutOfDieVia = outOfDieVia(xIdx, yIdx, zIdx, dieBox_);
         // add edge for preferred direction
-        if (dir == dbTechLayerDir::HORIZONTAL && yFound) {
+        if (dir == dbTechLayerDir::HORIZONTAL && yFound) {  // yCoord 在当前层有边且同向
           if (layerNum >= BOTTOM_ROUTING_LAYER
               && layerNum <= TOP_ROUTING_LAYER) {
             if ((!isOutOfDieVia || !hasOutOfDieViol(xIdx, yIdx, zIdx))
                 && (layer->getLef58RightWayOnGridOnlyConstraint() == nullptr
-                    || yIt->second != nullptr)) {
-              addEdge(xIdx, yIdx, zIdx, frDirEnum::E, bbox, initDR);
+                    || yIt->second != nullptr)) { // yIt->second 为空时说明没有 track pattern
+              addEdge(xIdx, yIdx, zIdx, frDirEnum::E, bbox, initDR);  // 为 xIdx, yIdx, zIdx 这个点添加 E 方向的边
               if (yIt->second == nullptr || isWorkerBorder(yIdx, false)) {
-                setGridCostE(xIdx, yIdx, zIdx);
+                setGridCostE(xIdx, yIdx, zIdx); // 如果该点在 Clip 的边上，则标志边有 cost
               }
             }
           }
           // via to upper layer
-          if (xFound2) {
+          if (xFound2) {  // 如果该点在相邻上层有边，那就意味着有过孔
             if (!isOutOfDieVia) {
               addEdge(xIdx, yIdx, zIdx, frDirEnum::U, bbox, initDR);
               bool condition
@@ -364,8 +369,8 @@ void FlexGridGraph::init(const frDesign* design,
 
   // get tracks intersecting with the Maze bbox
   map<frLayerNum, dbTechLayerDir> zMap;
-  initTracks(design, xMap, yMap, zMap, extBBox);
-  initGrids(xMap, yMap, zMap, followGuide);  // buildGridGraph
+  initTracks(design, xMap, yMap, zMap, extBBox); // 根据 DEF 中 TRACK 的定义，将相同方向的层的轨道坐标存入 xMap 和 yMap 这两个 map 中
+  initGrids(xMap, yMap, zMap, followGuide);  // buildGridGraph 还有初始化 Track 交织形成的交点集合 nodes_
   initEdges(
       design, xMap, yMap, zMap, routeBBox, initDR);  // add edges and edgeCost
 }
@@ -411,6 +416,7 @@ void FlexGridGraph::initTracks(
              ++trackNum) {
           frCoord trackLoc
               = trackNum * tp->getTrackSpacing() + tp->getStartCoord();
+          // 注意：同一 coord 上可能有不同同向的层的轨道在上面
           if (tp->isHorizontal()) {
             xMap[trackLoc][currLayerNum] = tp.get();
           } else {
