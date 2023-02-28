@@ -14,8 +14,16 @@ namespace utl {
 class MQ
 {
  public:
-  MQ(const std::string& serverAddr, int threadCnt = 1);
-  void sendMessage(const std::string& msg);
+  enum Type
+  {
+    REQ,
+    PUB,
+  };
+
+  MQ(const std::string& serverAddr,
+     Type socketType = Type::REQ,
+     int threadCnt = 1);
+  std::string request(const std::string& msg);
 
  private:
   const std::string& serverAddr_;

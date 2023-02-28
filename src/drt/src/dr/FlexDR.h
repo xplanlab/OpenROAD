@@ -43,6 +43,8 @@
 #include "dst/JobMessage.h"
 #include "frDesign.h"
 #include "gc/FlexGC.h"
+#include "utl/MQ.h"
+#include "xroute/net_ordering.pb.h"
 
 using Rectangle = boost::polygon::rectangle_data<int>;
 namespace dst {
@@ -739,10 +741,10 @@ class FlexDRWorker
   void initMarkers(const frDesign* design);
 
   // xroute
-  void xroute_setUsedPoints(xr::xrData& data,
+  void xroute_setUsedPoints(xroute::net_ordering::Request* req,
                             FlexMazeIdx beginMazeIdx,
                             FlexMazeIdx endMazeIdx);
-  void xroute_dump();
+  int xroute_queryNetOrder(utl::MQ& mq);
 
   // route_queue
   void route_queue();

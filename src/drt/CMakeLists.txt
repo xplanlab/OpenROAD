@@ -48,7 +48,8 @@ find_package(Boost REQUIRED COMPONENTS serialization)
 find_package(OpenMP REQUIRED)
 find_package(VTune)
 find_package(cppzmq REQUIRED)
-find_package(nlohmann_json REQUIRED)
+
+add_subdirectory(src/xr/proto)
 
 swig_lib(NAME      drt
          NAMESPACE drt
@@ -131,7 +132,6 @@ target_sources(drt
     src/frBaseTypes.cpp
     src/DesignCallBack.cpp
     src/xr/xrTool.cpp
-    src/xr/xrType.cpp
 )
 
 target_include_directories(drt
@@ -156,7 +156,7 @@ target_link_libraries(drt
     ${Boost_LIBRARIES}
     ZLIB::ZLIB
     cppzmq
-    nlohmann_json::nlohmann_json
+    xroute_proto
 )
 
 messages(

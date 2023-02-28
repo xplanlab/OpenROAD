@@ -141,17 +141,6 @@ _installCommonDev() {
         echo "cppzmq already installed."
     fi
 
-    # nlohmann_json
-    if [[ ! -d /usr/local/share/cmake/nlohmann_json/ ]]; then
-      cd "${baseDir}"
-      git clone --depth 1 --branch v3.11.2 https://github.com/nlohmann/json.git
-      cd json
-      cmake -B build .
-      cmake --build build -j $(nproc) --target install
-    else
-        echo "nlohmann_json already installed."
-    fi
-
     cd "${lastDir}"
     rm -rf "${baseDir}"
 }
@@ -209,7 +198,8 @@ _installUbuntuPackages() {
         zlib1g-dev \
         libomp-dev \
         devscripts \
-        debhelper
+        debhelper \
+        protobuf-compiler
 
     apt-get install -y \
         binutils \
@@ -292,7 +282,8 @@ _installRHELPackages() {
         python3-pip \
         python3-devel \
         clang \
-        clang-devel
+        clang-devel \
+        protobuf-compiler
 
     yum install -y \
         http://repo.okay.com.mx/centos/8/x86_64/release/bison-3.0.4-10.el8.x86_64.rpm \

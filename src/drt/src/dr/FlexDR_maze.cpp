@@ -29,7 +29,6 @@
 #include <algorithm>
 #include <boost/polygon/polygon.hpp>
 #include <chrono>
-#include <nlohmann/json.hpp>
 #include <random>
 #include <sstream>
 
@@ -38,8 +37,6 @@
 #include "dr/FlexDR.h"
 #include "dr/FlexDR_graphics.h"
 #include "gc/FlexGC.h"
-#include "xr/xrType.h"
-#include "utl/MQ.h"
 #include "utl/MyLogger.h"
 
 using namespace std;
@@ -1663,7 +1660,7 @@ void FlexDRWorker::identifyCongestionLevel()
   }
 }
 
-void FlexDRWorker::xroute_setUsedPoints(xr::xrData& data,
+void FlexDRWorker::xroute_setUsedPoints(xroute::net_ordering::Request* req,
                                         FlexMazeIdx beginMazeIdx,
                                         FlexMazeIdx endMazeIdx)
 {
@@ -1673,42 +1670,47 @@ void FlexDRWorker::xroute_setUsedPoints(xr::xrData& data,
     int x = beginMazeIdx.x();
     for (int y = beginMazeIdx.y(); y <= endMazeIdx.y(); y++) {
       int idx = gridGraph_.getIdx(x, y, z);
-      xr::xrNode& node = data.nodes[idx];
-      node.detail[0] = 1;
+      xroute::net_ordering::Node* node =  req->mutable_nodes(idx);
+      node->set_is_used(true);
     }
   } else if (beginMazeIdx.y() == endMazeIdx.y()) {
     int y = beginMazeIdx.y();
     for (int x = beginMazeIdx.x(); x <= endMazeIdx.x(); x++) {
       int idx = gridGraph_.getIdx(x, y, z);
-      xr::xrNode& node = data.nodes[idx];
-      node.detail[0] = 1;
+      xroute::net_ordering::Node* node =  req->mutable_nodes(idx);
+      node->set_is_used(true);
     }
   }
 }
 
-void FlexDRWorker::xroute_dump()
+int FlexDRWorker::xroute_queryNetOrder(utl::MQ& mq)
 {
-  // 获取 gridGraph 的数据
-  xr::xrData data = gridGraph_.dump();
+  xroute::net_ordering::Message msg;
+  xroute::net_ordering::Request* req = msg.mutable_request();
 
+  // 获取 gridGraph 的数据
+  gridGraph_.dump(req);
+
+  unsigned long violation = getNumMarkers();
   unsigned long wireLength = 0;
-  unsigned long vias = 0;
+  unsigned long via = 0;
 
   // 获取当前 drWorker 所有 nets 的信息
-  int netIdx = 0;
+  int netIdx = -1;
   for (auto& net : getNets()) {
     netIdx++;
 
-    int pinIdx = 0;
+    int pinIdx = -1;
     for (auto& pin : net->getPins()) {
       pinIdx++;
 
       for (auto& ap : pin->getAccessPatterns()) {
         FlexMazeIdx mi = ap->getMazeIdx();
         int idx = gridGraph_.getIdx(mi.x(), mi.y(), mi.z());
-        xr::xrNode& node = data.nodes[idx];
-        node.detail[1] = netIdx;
-        node.detail[2] = pinIdx;
+        xroute::net_ordering::Node* node = req->mutable_nodes(idx);
+        node->set_type(xroute::net_ordering::ACCESS);
+        node->set_net(netIdx);
+        node->set_pin(pinIdx);
       }
     }
 
@@ -1719,7 +1721,7 @@ void FlexDRWorker::xroute_dump()
         // 记录已使用的点
         FlexMazeIdx beginMazeIdx, endMazeIdx;
         std::tie(beginMazeIdx, endMazeIdx) = pathSeg->getMazeIdx();
-        xroute_setUsedPoints(data, beginMazeIdx, endMazeIdx);
+        xroute_setUsedPoints(req, beginMazeIdx, endMazeIdx);
 
         // 记录线长
         auto [bp, ep] = pathSeg->getPoints();
@@ -1727,166 +1729,308 @@ void FlexDRWorker::xroute_dump()
         wireLength += pathSegLen;
       } else if (connFig->typeId() == drcVia) {
         // 记录过孔数量
-        vias++;
+        via++;
       }
     }
 
-    unsigned long violation = getNumMarkers();
-    xr::xrReward reward{violation, wireLength, vias};
-    data.reward = reward;
+    req->set_reward_violation(violation);
+    req->set_reward_wire_length(wireLength);
+    req->set_reward_via(via);
   }
 
-  nlohmann::json j = data;
-  utl::MQ mq{"tcp://127.0.0.1:5555"};
-  mq.sendMessage(j.dump());
+  logger_->info(DRT,
+                998,
+                "Current wireLength {}, via {}, violation {}.",
+                wireLength,
+                via,
+                violation);
+
+  logger_->info(DRT, 997, "Requesting net order...");
+  string res = mq.request(msg.SerializeAsString());
+  msg = xroute::net_ordering::Message();
+  msg.ParseFromString(res);
+
+  // TOOD: 后面可能要区分一下消息序列
+
+  int selectedNetIdx = msg.response().net_index();
+  if (selectedNetIdx >= nets_.size() || selectedNetIdx < 0) {
+    logger_->error(DRT, 996, "Invalid net index {}.", selectedNetIdx);
+  }
+  logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
+
+  return selectedNetIdx;
 }
 
 void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  while (!rerouteQueue.empty()) {
-    if (getDRIter() ==  0) {
-      xroute_dump();
-    }
+  if (debugSettings_->debugDR) {
+    // 使用 xroute 的网络排序算法
 
-    auto& entry = rerouteQueue.front();
-    frBlockObject* obj = entry.block;
-    bool doRoute = entry.doRoute;
-    int numReroute = entry.numReroute;
+    utl::MQ mq{"tcp://127.0.0.1:5555"};
 
-    rerouteQueue.pop();
-    bool didRoute = false;
-    bool didCheck = false;
+    bool doRoute = true;
+    int lastOneIdx = -1;  // 最后一个待布线的 net 的索引，无需询问 xroute，直接布线即可
+    while (doRoute) {
+      int netIdx;
 
-    if (obj->typeId() == drcNet && doRoute) {
-      auto net = static_cast<drNet*>(obj);
-      if (numReroute != net->getNumReroutes()) {
-        continue;
+      if (lastOneIdx == -1) {
+        netIdx = xroute_queryNetOrder(mq);
+      } else {
+        netIdx = lastOneIdx;
+        logger_->info(DRT, 993, "Finish routing net {}, no need to ask xroute.", netIdx);
       }
-      // init
+
+      // TODO 这里对比于原有逻辑少了对 typeId 不是 drcNet 的 obj 的处理，所以后面可能会出现问题
+      drNet* net = nets_[netIdx].get();
+
       net->setModified(true);
       if (net->getFrNet()) {
         net->getFrNet()->setModified(true);
       }
       net->setNumMarkers(0);
-      if (graphics_)
-        graphics_->startNet(net);
+
       for (auto& uConnFig : net->getRouteConnFigs()) {
         subPathCost(uConnFig.get());
-        workerRegionQuery.remove(uConnFig.get());  // worker region query
+        workerRegionQuery.remove(uConnFig.get());
       }
       modEolCosts_poly(gcWorker_->getNet(net->getFrNet()),
                        ModCostType::subRouteShape);
-      // route_queue need to unreserve via access if all nets are ripupped
-      // (i.e., not routed) see route_queue_init_queue this
-      // is unreserve via via is reserved only when drWorker starts from nothing
-      // and via is reserved
-      if (net->getNumReroutes() == 0 && getRipupMode() == 1) {
+
+      if (getRipupMode() == 1) {
         initMazeCost_via_helper(net, false);
       }
       net->clear();
-      if (getDRIter() >= beginDebugIter)
-        logger_->info(DRT, 2002, "Routing net {}", net->getFrNet()->getName());
-      // route
       mazeNetInit(net);
-      bool isRouted = routeNet(net);
-      if (isRouted == false) {
-        if (OUT_MAZE_FILE == string("")) {
-          if (VERBOSE > 0) {
-            cout << "Waring: no output maze log specified, skipped writing "
-                    "maze log"
-                 << endl;
-          }
-        } else {
-          gridGraph_.print();
-        }
-        if (graphics_) {
-          graphics_->show(false);
-        }
-        // TODO Rect can't be logged directly
-        stringstream routeBoxStringStream;
-        routeBoxStringStream << getRouteBox();
-        logger_->error(DRT,
-                       255,
-                       "Maze Route cannot find path of net {} in "
-                       "worker of routeBox {}.",
-                       net->getFrNet()->getName(),
-                       routeBoxStringStream.str());
-      }
+      routeNet(net);
       mazeNetEnd(net);
       net->addNumReroutes();
-      didRoute = true;
-      // gc
-      if (gcWorker_->setTargetNet(net->getFrNet())) {
-        gcWorker_->updateDRNet(net);
-        gcWorker_->setEnableSurgicalFix(true);
-        gcWorker_->main();
-        modEolCosts_poly(gcWorker_->getTargetNet(), ModCostType::addRouteShape);
-        // write back GC patches
-        drNet* currNet = net;
-        for (auto& pwire : gcWorker_->getPWires()) {
-          auto net = pwire->getNet();
-          if (!net)
-            net = currNet;
-          auto tmpPWire = make_unique<drPatchWire>();
-          tmpPWire->setLayerNum(pwire->getLayerNum());
-          Point origin = pwire->getOrigin();
-          tmpPWire->setOrigin(origin);
-          Rect box = pwire->getOffsetBox();
-          tmpPWire->setOffsetBox(box);
-          tmpPWire->addToNet(net);
-          pwire->addToNet(net);
 
-          unique_ptr<drConnFig> tmp(std::move(tmpPWire));
-          auto& workerRegionQuery = getWorkerRegionQuery();
-          workerRegionQuery.add(tmp.get());
-          net->addRoute(std::move(tmp));
-        }
-        if (getDRIter() >= beginDebugIter
-            && !getGCWorker()->getMarkers().empty()) {
-          logger_->info(DRT,
-                        2003,
-                        "Ending net {} with markers:",
-                        net->getFrNet()->getName());
-          for (auto& marker : getGCWorker()->getMarkers()) {
-            cout << *marker << "\n";
+      gcWorker_->setTargetNet(net->getFrNet());
+      gcWorker_->updateDRNet(net);
+      gcWorker_->setEnableSurgicalFix(true);
+      gcWorker_->main();
+      modEolCosts_poly(gcWorker_->getTargetNet(), ModCostType::addRouteShape);
+
+      drNet* currNet = net;
+      for (auto& pwire : gcWorker_->getPWires()) {
+        auto net = pwire->getNet();
+        if (!net)
+          net = currNet;
+        auto tmpPWire = make_unique<drPatchWire>();
+        tmpPWire->setLayerNum(pwire->getLayerNum());
+        Point origin = pwire->getOrigin();
+        tmpPWire->setOrigin(origin);
+        Rect box = pwire->getOffsetBox();
+        tmpPWire->setOffsetBox(box);
+        tmpPWire->addToNet(net);
+        pwire->addToNet(net);
+
+        unique_ptr<drConnFig> tmp(std::move(tmpPWire));
+        auto& workerRegionQuery = getWorkerRegionQuery();
+        workerRegionQuery.add(tmp.get());
+        net->addRoute(std::move(tmp));
+      }
+
+      route_queue_markerCostDecay();
+      route_queue_addMarkerCost(gcWorker_->getMarkers());
+
+      // 如果布的是最后一个网络，则获取 reward 并发送 done 消息给 xroute
+      if (lastOneIdx != -1) {
+        unsigned long violation = getNumMarkers();
+        unsigned long wireLength = 0;
+        unsigned long via = 0;
+
+        for (auto& net : getNets()) {
+          for (auto& connFig : net->getRouteConnFigs()) {
+            if (connFig->typeId() == drcPathSeg) {
+              // 记录线长
+              auto pathSeg = static_cast<drPathSeg*>(connFig.get());
+              auto [bp, ep] = pathSeg->getPoints();
+              frCoord pathSegLen = Point::manhattanDistance(ep, bp);
+              wireLength += pathSegLen;
+            } else if (connFig->typeId() == drcVia) {
+              // 记录过孔数量
+              via++;
+            }
           }
         }
-        didCheck = true;
-      } else {
-        logger_->error(DRT, 1006, "failed to setTargetNet");
-      }
-    } else {
-      gcWorker_->setEnableSurgicalFix(false);
-      if (obj->typeId() == frcNet) {
-        auto net = static_cast<frNet*>(obj);
-        if (gcWorker_->setTargetNet(net)) {
-          gcWorker_->main();
-          didCheck = true;
-        }
-      } else {
-        if (gcWorker_->setTargetNet(obj)) {
-          gcWorker_->main();
-          didCheck = true;
-        }
-      }
-    }
-    // end
-    if (didCheck) {
-      route_queue_update_queue(gcWorker_->getMarkers(), rerouteQueue);
-    }
-    if (didRoute) {
-      route_queue_markerCostDecay();
-    }
-    if (didCheck) {
-      route_queue_addMarkerCost(gcWorker_->getMarkers());
-    }
 
-    if (graphics_) {
+        xroute::net_ordering::Message msg;
+        auto* done = msg.mutable_done();
+        done->set_reward_violation(violation);
+        done->set_reward_wire_length(wireLength);
+        done->set_reward_via(via);
+
+        logger_->info(DRT, 994, "Sending done flag...");
+        mq.request(msg.SerializeAsString());
+      }
+
+      // 检查所有网络是否都已完成布线
+      int routedCnt = 0;
+      int lastFoundIdx = -1;  // 上一个找到的未布线的 net 索引
+      for (int i = 0; i < nets_.size(); i++) {
+        if (nets_[i]->getNumReroutes() == 0) {
+          lastFoundIdx = i;
+        } else {
+          routedCnt++;
+        }
+
+        // 如果还剩下一个待布线 net 就不再询问 xroute 了
+        if(routedCnt == nets_.size() - 1 && lastFoundIdx != -1) {
+          lastOneIdx = lastFoundIdx;
+        }
+
+        if (routedCnt == nets_.size()) {
+          doRoute = false;
+        }
+      }
+    }
+  } else {
+    while (!rerouteQueue.empty()) {
+      // 使用 openroad 自身的基于优先队列的网络排序算法
+
+      auto& entry = rerouteQueue.front();
+      frBlockObject* obj = entry.block;
+      bool doRoute = entry.doRoute;
+      int numReroute = entry.numReroute;
+
+      rerouteQueue.pop();
+      bool didRoute = false;
+      bool didCheck = false;
+
       if (obj->typeId() == drcNet && doRoute) {
         auto net = static_cast<drNet*>(obj);
-        graphics_->endNet(net);
+        if (numReroute != net->getNumReroutes()) {
+          continue;
+        }
+        // init
+        net->setModified(true);
+        if (net->getFrNet()) {
+          net->getFrNet()->setModified(true);
+        }
+        net->setNumMarkers(0);
+        if (graphics_)
+          graphics_->startNet(net);
+        for (auto& uConnFig : net->getRouteConnFigs()) {
+          subPathCost(uConnFig.get());
+          workerRegionQuery.remove(uConnFig.get());  // worker region query
+        }
+        modEolCosts_poly(gcWorker_->getNet(net->getFrNet()),
+                         ModCostType::subRouteShape);
+        // route_queue need to unreserve via access if all nets are ripupped
+        // (i.e., not routed) see route_queue_init_queue this
+        // is unreserve via via is reserved only when drWorker starts from
+        // nothing and via is reserved
+        if (net->getNumReroutes() == 0 && getRipupMode() == 1) {
+          initMazeCost_via_helper(net, false);
+        }
+        net->clear();
+        if (getDRIter() >= beginDebugIter)
+          logger_->info(
+              DRT, 2002, "Routing net {}", net->getFrNet()->getName());
+        // route
+        mazeNetInit(net);
+        bool isRouted = routeNet(net);
+        if (isRouted == false) {
+          if (OUT_MAZE_FILE == string("")) {
+            if (VERBOSE > 0) {
+              cout << "Waring: no output maze log specified, skipped writing "
+                      "maze log"
+                   << endl;
+            }
+          } else {
+            gridGraph_.print();
+          }
+          if (graphics_) {
+            graphics_->show(false);
+          }
+          // TODO Rect can't be logged directly
+          stringstream routeBoxStringStream;
+          routeBoxStringStream << getRouteBox();
+          logger_->error(DRT,
+                         255,
+                         "Maze Route cannot find path of net {} in "
+                         "worker of routeBox {}.",
+                         net->getFrNet()->getName(),
+                         routeBoxStringStream.str());
+        }
+        mazeNetEnd(net);
+        net->addNumReroutes();
+        didRoute = true;
+        // gc
+        if (gcWorker_->setTargetNet(net->getFrNet())) {
+          gcWorker_->updateDRNet(net);
+          gcWorker_->setEnableSurgicalFix(true);
+          gcWorker_->main();
+          modEolCosts_poly(gcWorker_->getTargetNet(),
+                           ModCostType::addRouteShape);
+          // write back GC patches
+          drNet* currNet = net;
+          for (auto& pwire : gcWorker_->getPWires()) {
+            auto net = pwire->getNet();
+            if (!net)
+              net = currNet;
+            auto tmpPWire = make_unique<drPatchWire>();
+            tmpPWire->setLayerNum(pwire->getLayerNum());
+            Point origin = pwire->getOrigin();
+            tmpPWire->setOrigin(origin);
+            Rect box = pwire->getOffsetBox();
+            tmpPWire->setOffsetBox(box);
+            tmpPWire->addToNet(net);
+            pwire->addToNet(net);
+
+            unique_ptr<drConnFig> tmp(std::move(tmpPWire));
+            auto& workerRegionQuery = getWorkerRegionQuery();
+            workerRegionQuery.add(tmp.get());
+            net->addRoute(std::move(tmp));
+          }
+          if (getDRIter() >= beginDebugIter
+              && !getGCWorker()->getMarkers().empty()) {
+            logger_->info(DRT,
+                          2003,
+                          "Ending net {} with markers:",
+                          net->getFrNet()->getName());
+            for (auto& marker : getGCWorker()->getMarkers()) {
+              cout << *marker << "\n";
+            }
+          }
+          didCheck = true;
+        } else {
+          logger_->error(DRT, 1006, "failed to setTargetNet");
+        }
+      } else {
+        gcWorker_->setEnableSurgicalFix(false);
+        if (obj->typeId() == frcNet) {
+          auto net = static_cast<frNet*>(obj);
+          if (gcWorker_->setTargetNet(net)) {
+            gcWorker_->main();
+            didCheck = true;
+          }
+        } else {
+          if (gcWorker_->setTargetNet(obj)) {
+            gcWorker_->main();
+            didCheck = true;
+          }
+        }
+      }
+      // end
+      if (didCheck) {
+        route_queue_update_queue(gcWorker_->getMarkers(), rerouteQueue);
+      }
+      if (didRoute) {
+        route_queue_markerCostDecay();
+      }
+      if (didCheck) {
+        route_queue_addMarkerCost(gcWorker_->getMarkers());
+      }
+
+      if (graphics_) {
+        if (obj->typeId() == drcNet && doRoute) {
+          auto net = static_cast<drNet*>(obj);
+          graphics_->endNet(net);
+        }
       }
     }
   }

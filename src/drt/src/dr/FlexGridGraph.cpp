@@ -517,3 +517,54 @@ void FlexGridGraph::print() const
     cout << "Error: Fail to open maze log\n";
   }
 }
+
+void FlexGridGraph::dump(xroute::net_ordering::Request* req)
+{
+  int xDim, yDim, zDim;
+  getDim(xDim, yDim, zDim);
+  req->set_dim_x(xDim);
+  req->set_dim_y(yDim);
+  req->set_dim_z(zDim);
+
+  for (int z = 0; z < zDim; z++) {
+//    auto lNum = getLayerNum(z);
+//    auto layer = getTech()->getLayer(lNum);
+
+    for (int y = 0; y < yDim; y++) {
+      for (int x = 0; x < xDim; x++) {
+        xroute::net_ordering::Node* node = req->add_nodes();
+
+        node->set_maze_x(x);
+        node->set_maze_y(y);
+        node->set_maze_z(z);
+
+        Point pt;
+        getPoint(pt, x, y);
+        node->set_point_x(pt.x());
+        node->set_point_y(pt.y());
+        node->set_point_z(getZHeight(z));
+
+        // 先设置部分值
+        bool isBlockage = isAllBlocked(x, y, z);
+        node->set_type(isBlockage ? xroute::net_ordering::BLOCKAGE
+                                 : xroute::net_ordering::NORMAL);
+        node->set_is_used(isBlockage);
+
+//        frDirEnum frDirEnumAllCustom[] = {frDirEnum::E,
+//                                    frDirEnum::S,
+//                                    frDirEnum::W,
+//                                    frDirEnum::N,
+//                                    frDirEnum::U,
+//                                    frDirEnum::D};
+//        for (const auto dir : frDirEnumAllCustom) {
+//          int cost = -1;
+//          if (hasEdge(x, y, z, dir)) {
+//            // TODO 参照 src/drt/src/dr/FlexGridGraph_maze.cpp:L436，那里有区分 NDR，因不清楚作用，所以暂时忽略
+//            cost = getCosts(x, y, z, dir, layer);
+//          }
+//          costs.push_back(cost);
+//        }
+      }
+    }
+  }
+}
