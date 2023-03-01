@@ -78,11 +78,9 @@ add_library(db
     dbNameCache.cpp 
     dbProperty.cpp 
     dbPropertyItr.cpp 
-    dbFlatten.cpp 
     dbUtil.cpp
     gs.cpp
     grids.cpp
-    dbLogger.cpp 
     tmg_conn.cpp
     tmg_conn_g.cpp
     tmg_conn_s.cpp
@@ -147,7 +145,6 @@ target_link_libraries(db
         defout
         tm
         zutil
-        upf
         utl
         ${TCL_LIBRARY}
 )

@@ -322,18 +322,8 @@ void FlexDR::initGCell2BoundaryPin()
                   = getDesign()->getTopBlock()->getGCellBox(Point(x, y));
               frCoord leftBound = gcellBox.xMin();
               frCoord rightBound = gcellBox.xMax();
-              bool hasLeftBound = true;
-              bool hasRightBound = true;
-              if (bp.x() < leftBound) {
-                hasLeftBound = true;
-              } else {
-                hasLeftBound = false;
-              }
-              if (ep.x() >= rightBound) {
-                hasRightBound = true;
-              } else {
-                hasRightBound = false;
-              }
+              const bool hasLeftBound = bp.x() < leftBound;
+              const bool hasRightBound = ep.x() >= rightBound;
               if (hasLeftBound) {
                 Point boundaryPt(leftBound, bp.y());
                 gcell2BoundaryPin_[x][y][netPtr].insert(
@@ -354,18 +344,8 @@ void FlexDR::initGCell2BoundaryPin()
                   = getDesign()->getTopBlock()->getGCellBox(Point(x, y));
               frCoord bottomBound = gcellBox.yMin();
               frCoord topBound = gcellBox.yMax();
-              bool hasBottomBound = true;
-              bool hasTopBound = true;
-              if (bp.y() < bottomBound) {
-                hasBottomBound = true;
-              } else {
-                hasBottomBound = false;
-              }
-              if (ep.y() >= topBound) {
-                hasTopBound = true;
-              } else {
-                hasTopBound = false;
-              }
+              const bool hasBottomBound = bp.y() < bottomBound;
+              const bool hasTopBound = ep.y() >= topBound;
               if (hasBottomBound) {
                 Point boundaryPt(bp.x(), bottomBound);
                 gcell2BoundaryPin_[x][y][netPtr].insert(
@@ -401,8 +381,8 @@ void FlexDR::init_halfViaEncArea()
       frVia via(viaDef);
       Rect layer1Box = via.getLayer1BBox();
       Rect layer2Box = via.getLayer2BBox();
-      auto layer1HalfArea = layer1Box.minDXDY() * layer1Box.maxDXDY() / 2;
-      auto layer2HalfArea = layer2Box.minDXDY() * layer2Box.maxDXDY() / 2;
+      auto layer1HalfArea = layer1Box.area() / 2;
+      auto layer2HalfArea = layer2Box.area() / 2;
       halfViaEncArea.push_back(make_pair(layer1HalfArea, layer2HalfArea));
     } else {
       halfViaEncArea.push_back(make_pair(0, 0));
