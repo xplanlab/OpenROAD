@@ -1770,16 +1770,20 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
     utl::MQ mq{"tcp://127.0.0.1:5555"};
 
-    bool doRoute = true;
-    int lastOneIdx = -1;  // 最后一个待布线的 net 的索引，无需询问 xroute，直接布线即可
-    while (doRoute) {
+    vector<unsigned int> netIndices;
+    for (int i = 0; i < nets_.size(); i++) {
+      netIndices.push_back(i);
+    }
+
+    while (netIndices.size() > 0) {
       int netIdx;
 
-      if (lastOneIdx == -1) {
-        netIdx = xroute_queryNetOrder(mq);
+      // 如果还剩下一个待布线 net 就不再询问 xroute 了
+      if (netIndices.size() == 1) {
+        netIdx = netIndices[0];
+        logger_->info(DRT, 993, "Finish routing net {} without asking xroute.", netIdx);
       } else {
-        netIdx = lastOneIdx;
-        logger_->info(DRT, 993, "Finish routing net {}, no need to ask xroute.", netIdx);
+        netIdx = xroute_queryNetOrder(mq);
       }
 
       // TODO 这里对比于原有逻辑少了对 typeId 不是 drcNet 的 obj 的处理，所以后面可能会出现问题
@@ -1805,7 +1809,13 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       mazeNetInit(net);
       routeNet(net);
       mazeNetEnd(net);
-      net->addNumReroutes();
+
+      auto it = std::find(netIndices.begin(), netIndices.end(), netIdx);
+      if (it != netIndices.end()) {
+        netIndices.erase(it);
+      } else {
+        logger_->info(DRT, 992, "Cannot find net index {}.", netIdx);
+      }
 
       gcWorker_->setTargetNet(net->getFrNet());
       gcWorker_->updateDRNet(net);
@@ -1836,8 +1846,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       route_queue_markerCostDecay();
       route_queue_addMarkerCost(gcWorker_->getMarkers());
 
-      // 如果布的是最后一个网络，则获取 reward 并发送 done 消息给 xroute
-      if (lastOneIdx != -1) {
+      // 如果已经完成布线，则获取 reward 并发送 done 消息给 xroute
+      if (netIndices.size() == 0) {
         unsigned long violation = getNumMarkers();
         unsigned long wireLength = 0;
         unsigned long via = 0;
@@ -1865,26 +1875,6 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
         logger_->info(DRT, 994, "Sending done flag...");
         mq.request(msg.SerializeAsString());
-      }
-
-      // 检查所有网络是否都已完成布线
-      int routedCnt = 0;
-      int lastFoundIdx = -1;  // 上一个找到的未布线的 net 索引
-      for (int i = 0; i < nets_.size(); i++) {
-        if (nets_[i]->getNumReroutes() == 0) {
-          lastFoundIdx = i;
-        } else {
-          routedCnt++;
-        }
-
-        // 如果还剩下一个待布线 net 就不再询问 xroute 了
-        if(routedCnt == nets_.size() - 1 && lastFoundIdx != -1) {
-          lastOneIdx = lastFoundIdx;
-        }
-
-        if (routedCnt == nets_.size()) {
-          doRoute = false;
-        }
       }
     }
   } else {
