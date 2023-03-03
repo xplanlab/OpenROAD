@@ -250,10 +250,8 @@ add_subdirectory(cts)
 add_subdirectory(grt)
 add_subdirectory(tap)
 add_subdirectory(mpl)
-add_subdirectory(mpl2)
 add_subdirectory(rcx)
 add_subdirectory(psm)
-add_subdirectory(par)
 add_subdirectory(ant)
 add_subdirectory(gui)
 add_subdirectory(drt)
@@ -328,15 +326,6 @@ target_link_libraries(openroad
   ${CMAKE_THREAD_LIBS_INIT}
 )
 
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  # mpl2 aborts with link error on darwin and par causes abseil link error at startup on apple silicon so do not link it.
-  target_link_libraries(openroad mpl2 par)
-  target_compile_definitions(openroad PRIVATE ENABLE_MPL2)
-  target_compile_definitions(openroad PRIVATE ENABLE_PAR)
-else()
-  message(STATUS "Removing MPL2 and PAR to avoid run time fatal error.")
-endif()
-
 # tclReadline
 if (TCL_READLINE_LIBRARY AND TCL_READLINE_H)
   target_compile_definitions(openroad PRIVATE ENABLE_READLINE)
@@ -405,13 +394,6 @@ if (Python3_FOUND AND BUILD_PYTHON)
     pdn_py
     dft_py
   )
-
-  if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    # par_py causes abseil link error at startup on apple silicon so do not link it.
-    target_link_libraries(openroad par_py)
-  else()
-    message(STATUS "Removing PAR_PY to avoid run time fatal error.")
-  endif()
 else()
   message(STATUS "Python3 disabled")
 endif()
