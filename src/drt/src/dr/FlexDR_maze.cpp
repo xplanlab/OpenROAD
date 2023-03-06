@@ -1679,6 +1679,14 @@ void FlexDRWorker::xroute_setUsedPoints(xroute::net_ordering::Request* req,
       xroute::net_ordering::Node* node =  req->mutable_nodes(idx);
       node->set_is_used(true);
     }
+  } else if (beginMazeIdx.x() == endMazeIdx.x() && beginMazeIdx.y() == endMazeIdx.y()) {
+    int x = beginMazeIdx.x();
+    int y = beginMazeIdx.y();
+    for (int z = beginMazeIdx.z(); z <= endMazeIdx.x(); z++) {
+      int idx = gridGraph_.getIdx(x, y, z);
+      xroute::net_ordering::Node* node =  req->mutable_nodes(idx);
+      node->set_is_used(true);
+    }
   }
 }
 
@@ -1727,6 +1735,13 @@ int FlexDRWorker::xroute_queryNetOrder(utl::MQ& mq)
         frCoord pathSegLen = Point::manhattanDistance(ep, bp);
         wireLength += pathSegLen;
       } else if (connFig->typeId() == drcVia) {
+        auto viaSeg = static_cast<drVia*>(connFig.get());
+
+        // 记录已使用的点
+        FlexMazeIdx beginMazeIdx, endMazeIdx;
+        std::tie(beginMazeIdx, endMazeIdx) = viaSeg->getMazeIdx();
+        xroute_setUsedPoints(req, beginMazeIdx, endMazeIdx);
+
         // 记录过孔数量
         via++;
       }
@@ -1739,21 +1754,26 @@ int FlexDRWorker::xroute_queryNetOrder(utl::MQ& mq)
 
   logger_->info(DRT,
                 998,
-                "Current wireLength {}, via {}, violation {}.",
+                "Current violation{}, wireLength {}, via {}.",
+                violation,
                 wireLength,
-                via,
-                violation);
-
-  logger_->info(DRT, 997, "Requesting net order...");
-  string res = mq.request(msg.SerializeAsString());
-  msg = xroute::net_ordering::Message();
-  msg.ParseFromString(res);
+                via);
 
   // TOOD: 后面可能要区分一下消息序列
 
-  int selectedNetIdx = msg.response().net_index();
-  if (selectedNetIdx >= nets_.size() || selectedNetIdx < 0) {
-    logger_->error(DRT, 996, "Invalid net index {}.", selectedNetIdx);
+  int selectedNetIdx;
+  string reqStr = msg.SerializeAsString();
+
+  while (true) {
+    logger_->info(DRT, 997, "Requesting net order...");
+    string res = mq.request(reqStr);
+    msg = xroute::net_ordering::Message();
+    msg.ParseFromString(res);
+
+    selectedNetIdx = msg.response().net_index();
+    if (selectedNetIdx >= 0 && selectedNetIdx < nets_.size()) {
+      break;
+    }
   }
   logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
 
@@ -1767,7 +1787,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
   if (debugSettings_->debugDR) {
     // 使用 xroute 的网络排序算法
 
-    utl::MQ mq{"tcp://127.0.0.1:5555"};
+    utl::MQ mq{"tcp://192.168.0.100:5555"};
 
     vector<unsigned int> netIndices;
     for (int i = 0; i < nets_.size(); i++) {

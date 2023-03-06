@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import json
 import os
 import time
@@ -6,10 +8,21 @@ import zmq
 
 import proto.xroute.net_ordering_pb2 as net_ordering
 
+
+# 请求初始化环境
+context = zmq.Context()
+socket = context.socket(zmq.REQ)
+socket.connect('tcp://localhost:6666')
+message = net_ordering.Message()
+message.initial.task_id = 1
+socket.send(message.SerializeToString())
+socket.recv()
+time.sleep(1)
+
+# 初始化环境
 context = zmq.Context()
 socket = context.socket(zmq.REP)
-socket.bind("tcp://*:5555")
-
+socket.bind('tcp://*:5555')
 
 while True:
     message_raw = socket.recv()
@@ -70,9 +83,9 @@ while True:
                 is_input = True
 
         # 回复 netIndex
-        res = net_ordering.Message()
-        res.response.net_index = netIndex - 1  # net 是从 1 开始的，所以返回时记得减回去
-        socket.send(res.SerializeToString())
+        message = net_ordering.Message()
+        message.response.net_index = netIndex - 1  # net 是从 1 开始的，所以返回时记得减回去
+        socket.send(message.SerializeToString())
 
     elif message.HasField('done'):
         print(

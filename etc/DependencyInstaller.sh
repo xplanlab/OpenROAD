@@ -199,6 +199,7 @@ _installUbuntuPackages() {
         libomp-dev \
         devscripts \
         debhelper \
+        libprotobuf-dev \
         protobuf-compiler
 
     apt-get install -y \
@@ -283,6 +284,7 @@ _installRHELPackages() {
         python3-devel \
         clang \
         clang-devel \
+        libprotobuf-dev \
         protobuf-compiler
 
     yum install -y \

@@ -26,6 +26,10 @@ enum NodeType {
   ACCESS = 2;
 }
 
+message Initial {
+  uint32 task_id = 1;
+}
+
 message Request {
   // dimensions of the maze
   uint32 dim_x = 1;
@@ -51,8 +55,9 @@ message Done {
 
 message Message {
   oneof wrapper {
-    Request request = 1;
-    Response response = 2;
-    Done done = 3;
+    Initial initial = 1;
+    Request request = 2;
+    Response response = 3;
+    Done done = 4;
   }
 }
