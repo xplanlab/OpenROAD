@@ -49,8 +49,6 @@ find_package(OpenMP REQUIRED)
 find_package(VTune)
 find_package(cppzmq REQUIRED)
 
-add_subdirectory(src/xr/proto)
-
 swig_lib(NAME      drt
          NAMESPACE drt
          I_FILE    src/TritonRoute.i
@@ -131,7 +129,6 @@ target_sources(drt
     src/MakeTritonRoute.cpp
     src/frBaseTypes.cpp
     src/DesignCallBack.cpp
-    src/xr/xrTool.cpp
 )
 
 target_include_directories(drt
@@ -156,7 +153,7 @@ target_link_libraries(drt
     ${Boost_LIBRARIES}
     ZLIB::ZLIB
     cppzmq
-    xroute_proto
+    openroad_api
 )
 
 messages(

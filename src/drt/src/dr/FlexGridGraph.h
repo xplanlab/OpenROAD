@@ -37,7 +37,7 @@
 #include "dr/FlexWavefront.h"
 #include "frBaseTypes.h"
 #include "frDesign.h"
-#include "xroute/net_ordering.pb.h"
+#include "openroad_api/proto/net_ordering.pb.h"
 
 namespace fr {
 class FlexDRWorker;
@@ -934,7 +934,10 @@ class FlexGridGraph
     cout << "fixedShapeCostPlanar " << n.fixedShapeCostPlanar << "\n";
   }
 
-  void dump(xroute::net_ordering::Request* req);
+  void setUsedPointsForDump(openroad_api::net_ordering::Request* req,
+                            FlexMazeIdx beginMazeIdx,
+                            FlexMazeIdx endMazeIdx);
+  void dump(openroad_api::net_ordering::Request* req);
 
  private:
   frTechObject* tech_;

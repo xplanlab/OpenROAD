@@ -2,10 +2,7 @@
 // Created by zarkin404 on 2023/2/1.
 //
 
-#ifndef _OPENROAD_MYLOGGER_H_
-#define _OPENROAD_MYLOGGER_H_
-
-#endif  // _OPENROAD_MYLOGGER_H_
+#pragma once
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"

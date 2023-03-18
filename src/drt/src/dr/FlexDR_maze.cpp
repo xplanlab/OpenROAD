@@ -1659,125 +1659,42 @@ void FlexDRWorker::identifyCongestionLevel()
   }
 }
 
-void FlexDRWorker::xroute_setUsedPoints(xroute::net_ordering::Request* req,
-                                        FlexMazeIdx beginMazeIdx,
-                                        FlexMazeIdx endMazeIdx)
+int FlexDRWorker::queryNetOrder(utl::MQ& mq, bool isDone)
 {
-  int z = beginMazeIdx.z();
-
-  if (beginMazeIdx.x() == endMazeIdx.x()) {
-    int x = beginMazeIdx.x();
-    for (int y = beginMazeIdx.y(); y <= endMazeIdx.y(); y++) {
-      int idx = gridGraph_.getIdx(x, y, z);
-      xroute::net_ordering::Node* node =  req->mutable_nodes(idx);
-      node->set_is_used(true);
-    }
-  } else if (beginMazeIdx.y() == endMazeIdx.y()) {
-    int y = beginMazeIdx.y();
-    for (int x = beginMazeIdx.x(); x <= endMazeIdx.x(); x++) {
-      int idx = gridGraph_.getIdx(x, y, z);
-      xroute::net_ordering::Node* node =  req->mutable_nodes(idx);
-      node->set_is_used(true);
-    }
-  } else if (beginMazeIdx.x() == endMazeIdx.x() && beginMazeIdx.y() == endMazeIdx.y()) {
-    int x = beginMazeIdx.x();
-    int y = beginMazeIdx.y();
-    for (int z = beginMazeIdx.z(); z <= endMazeIdx.x(); z++) {
-      int idx = gridGraph_.getIdx(x, y, z);
-      xroute::net_ordering::Node* node =  req->mutable_nodes(idx);
-      node->set_is_used(true);
-    }
-  }
-}
-
-int FlexDRWorker::xroute_queryNetOrder(utl::MQ& mq)
-{
-  xroute::net_ordering::Message msg;
-  xroute::net_ordering::Request* req = msg.mutable_request();
+  openroad_api::net_ordering::Message msg;
+  openroad_api::net_ordering::Request* req = msg.mutable_request();
 
   // 获取 gridGraph 的数据
   gridGraph_.dump(req);
 
-  unsigned long violation = getNumMarkers();
-  unsigned long wireLength = 0;
-  unsigned long via = 0;
-
-  // 获取当前 drWorker 所有 nets 的信息
-  int netIdx = -1;
-  for (auto& net : getNets()) {
-    netIdx++;
-
-    int pinIdx = -1;
-    for (auto& pin : net->getPins()) {
-      pinIdx++;
-
-      for (auto& ap : pin->getAccessPatterns()) {
-        FlexMazeIdx mi = ap->getMazeIdx();
-        int idx = gridGraph_.getIdx(mi.x(), mi.y(), mi.z());
-        xroute::net_ordering::Node* node = req->mutable_nodes(idx);
-        node->set_type(xroute::net_ordering::ACCESS);
-        node->set_net(netIdx);
-        node->set_pin(pinIdx);
-      }
-    }
-
-    for (auto& connFig : net->getRouteConnFigs()) {
-      if (connFig->typeId() == drcPathSeg) {
-        auto pathSeg = static_cast<drPathSeg*>(connFig.get());
-
-        // 记录已使用的点
-        FlexMazeIdx beginMazeIdx, endMazeIdx;
-        std::tie(beginMazeIdx, endMazeIdx) = pathSeg->getMazeIdx();
-        xroute_setUsedPoints(req, beginMazeIdx, endMazeIdx);
-
-        // 记录线长
-        auto [bp, ep] = pathSeg->getPoints();
-        frCoord pathSegLen = Point::manhattanDistance(ep, bp);
-        wireLength += pathSegLen;
-      } else if (connFig->typeId() == drcVia) {
-        auto viaSeg = static_cast<drVia*>(connFig.get());
-
-        // 记录已使用的点
-        FlexMazeIdx beginMazeIdx, endMazeIdx;
-        std::tie(beginMazeIdx, endMazeIdx) = viaSeg->getMazeIdx();
-        xroute_setUsedPoints(req, beginMazeIdx, endMazeIdx);
-
-        // 记录过孔数量
-        via++;
-      }
-    }
-
-    req->set_reward_violation(violation);
-    req->set_reward_wire_length(wireLength);
-    req->set_reward_via(via);
+  if (isDone) {
+    req->set_is_done(true);
   }
-
-  logger_->info(DRT,
-                998,
-                "Current violation{}, wireLength {}, via {}.",
-                violation,
-                wireLength,
-                via);
-
-  // TOOD: 后面可能要区分一下消息序列
 
   int selectedNetIdx;
   string reqStr = msg.SerializeAsString();
 
-  while (true) {
-    logger_->info(DRT, 997, "Requesting net order...");
-    string res = mq.request(reqStr);
-    msg = xroute::net_ordering::Message();
-    msg.ParseFromString(res);
+  if (isDone) {
+    logger_->info(DRT, 994, "Sending done message...");
+    mq.request(reqStr);
+  } else {
+    while (true) {
+      logger_->info(DRT, 997, "Requesting net order...");
+      string res = mq.request(reqStr);
+      msg = openroad_api::net_ordering::Message();
+      msg.ParseFromString(res);
 
-    selectedNetIdx = msg.response().net_index();
-    if (selectedNetIdx >= 0 && selectedNetIdx < nets_.size()) {
-      break;
+      selectedNetIdx = msg.response().net_index();
+      if (selectedNetIdx >= 0 && selectedNetIdx < nets_.size()) {
+        break;
+      } else {
+        logger_->info(DRT, 991, "Invalid net index {}.", selectedNetIdx);
+      }
     }
-  }
-  logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
+    logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
 
-  return selectedNetIdx;
+    return selectedNetIdx;
+  }
 }
 
 void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
@@ -1785,28 +1702,25 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
   auto& workerRegionQuery = getWorkerRegionQuery();
 
   if (debugSettings_->debugDR) {
-    // 使用 xroute 的网络排序算法
+    // TODO 加入 taskId 避免算法端被乱发
+    utl::MQ mq{"tcp://127.0.0.1:5555"};
 
-    utl::MQ mq{"tcp://192.168.0.100:5555"};
+    map<unsigned int, drNet*> outerNetMap;
 
-    vector<unsigned int> netIndices;
-    for (int i = 0; i < nets_.size(); i++) {
-      netIndices.push_back(i);
+    int outerNetIdx = 0;
+    for (auto& net : nets_) {
+      if (net->getPins().size() > 1) {
+        outerNetMap[outerNetIdx] = net.get();
+        outerNetIdx++;
+      }
     }
 
-    while (netIndices.size() > 0) {
-      int netIdx;
+    setOuterNetMap(outerNetMap);
 
-      // 如果还剩下一个待布线 net 就不再询问 xroute 了
-      if (netIndices.size() == 1) {
-        netIdx = netIndices[0];
-        logger_->info(DRT, 993, "Finish routing net {} without asking xroute.", netIdx);
-      } else {
-        netIdx = xroute_queryNetOrder(mq);
-      }
-
-      // TODO 这里对比于原有逻辑少了对 typeId 不是 drcNet 的 obj 的处理，所以后面可能会出现问题
-      drNet* net = nets_[netIdx].get();
+    int routedCnt = 0;
+    while (routedCnt < outerNetMap.size()) {
+      int selectedNetIdx = queryNetOrder(mq, false);
+      drNet* net = outerNetMap[selectedNetIdx];
 
       net->setModified(true);
       if (net->getFrNet()) {
@@ -1826,15 +1740,20 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       }
       net->clear();
       mazeNetInit(net);
-      routeNet(net);
-      mazeNetEnd(net);
-
-      auto it = std::find(netIndices.begin(), netIndices.end(), netIdx);
-      if (it != netIndices.end()) {
-        netIndices.erase(it);
-      } else {
-        logger_->info(DRT, 992, "Cannot find net index {}.", netIdx);
+      bool isRouted = routeNet(net);
+      if (!isRouted) {
+        stringstream routeBoxStringStream;
+        routeBoxStringStream << getRouteBox();
+        logger_->error(DRT,
+                       996,
+                       "Maze Route cannot find path of net {} in "
+                       "worker of routeBox {}.",
+                       net->getFrNet()->getName(),
+                       routeBoxStringStream.str());
       }
+
+      mazeNetEnd(net);
+      routedCnt++;
 
       gcWorker_->setTargetNet(net->getFrNet());
       gcWorker_->updateDRNet(net);
@@ -1865,35 +1784,9 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       route_queue_markerCostDecay();
       route_queue_addMarkerCost(gcWorker_->getMarkers());
 
-      // 如果已经完成布线，则获取 reward 并发送 done 消息给 xroute
-      if (netIndices.size() == 0) {
-        unsigned long violation = getNumMarkers();
-        unsigned long wireLength = 0;
-        unsigned long via = 0;
-
-        for (auto& net : getNets()) {
-          for (auto& connFig : net->getRouteConnFigs()) {
-            if (connFig->typeId() == drcPathSeg) {
-              // 记录线长
-              auto pathSeg = static_cast<drPathSeg*>(connFig.get());
-              auto [bp, ep] = pathSeg->getPoints();
-              frCoord pathSegLen = Point::manhattanDistance(ep, bp);
-              wireLength += pathSegLen;
-            } else if (connFig->typeId() == drcVia) {
-              // 记录过孔数量
-              via++;
-            }
-          }
-        }
-
-        xroute::net_ordering::Message msg;
-        auto* done = msg.mutable_done();
-        done->set_reward_violation(violation);
-        done->set_reward_wire_length(wireLength);
-        done->set_reward_via(via);
-
-        logger_->info(DRT, 994, "Sending done flag...");
-        mq.request(msg.SerializeAsString());
+      // 如果已经完成布线，则发送 done 消息
+      if (routedCnt == outerNetMap.size()) {
+        queryNetOrder(mq, true);
       }
     }
   } else {

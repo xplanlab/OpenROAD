@@ -4,3 +4,6 @@
 [submodule "src/abc"]
 	path = third-party/abc
 	url = https://github.com/The-OpenROAD-Project/abc.git
+[submodule "openroad-api"]
+	path = third-party/openroad-api
+	url = git@192.168.0.202:The-OpenROAD-Project/openroad-api.git

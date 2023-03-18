@@ -44,7 +44,7 @@
 #include "frDesign.h"
 #include "gc/FlexGC.h"
 #include "utl/MQ.h"
-#include "xroute/net_ordering.pb.h"
+#include "openroad_api/proto/net_ordering.pb.h"
 
 using Rectangle = boost::polygon::rectangle_data<int>;
 namespace dst {
@@ -398,6 +398,10 @@ class FlexDRWorker
     gridGraph_.setGraphics(in);
   }
   void setViaData(FlexDRViaData* viaData) { via_data_ = viaData; }
+  void setOuterNetMap(map<unsigned int, drNet*> outerNetMap)
+  {
+    outerNetMap_ = outerNetMap;
+  }
   // getters
   frTechObject* getTech() const { return design_->getTech(); }
   void getRouteBox(Rect& boxIn) const { boxIn = routeBox_; }
@@ -439,6 +443,7 @@ class FlexDRWorker
   FlexGCWorker* getGCWorker() { return gcWorker_.get(); }
   const FlexDRViaData* getViaData() const { return via_data_; }
   const FlexGridGraph& getGridGraph() const { return gridGraph_; }
+  map<unsigned int, drNet*> getOuterNetMap() const { return outerNetMap_; }
   // others
   int main(frDesign* design);
   void distributedMain(frDesign* design);
@@ -542,6 +547,9 @@ class FlexDRWorker
   bool dist_on_;
   bool isCongested_;
   bool save_updates_;
+
+  // openroad_api
+  map<unsigned int, drNet*> outerNetMap_;
 
   // init
   void init(const frDesign* design);
@@ -740,11 +748,11 @@ class FlexDRWorker
   // DRC
   void initMarkers(const frDesign* design);
 
-  // xroute
-  void xroute_setUsedPoints(xroute::net_ordering::Request* req,
+  // openroad_api
+  void setUsedPoints(openroad_api::net_ordering::Request* req,
                             FlexMazeIdx beginMazeIdx,
                             FlexMazeIdx endMazeIdx);
-  int xroute_queryNetOrder(utl::MQ& mq);
+  int queryNetOrder(utl::MQ& mq, bool isDone);
 
   // route_queue
   void route_queue();

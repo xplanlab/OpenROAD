@@ -524,7 +524,43 @@ void FlexGridGraph::print() const
   }
 }
 
-void FlexGridGraph::dump(xroute::net_ordering::Request* req)
+void FlexGridGraph::setUsedPointsForDump(
+    openroad_api::net_ordering::Request* req,
+    FlexMazeIdx beginMazeIdx,
+    FlexMazeIdx endMazeIdx)
+{
+  if (beginMazeIdx.x() == endMazeIdx.x()) {
+    // 垂直走线
+    int x = beginMazeIdx.x();
+    int z = beginMazeIdx.z();
+    for (int y = beginMazeIdx.y(); y <= endMazeIdx.y(); y++) {
+      int idx = getIdx(x, y, z);
+      openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
+      node->set_is_used(true);
+    }
+  } else if (beginMazeIdx.y() == endMazeIdx.y()) {
+    // 水平走线
+    int y = beginMazeIdx.y();
+    int z = beginMazeIdx.z();
+    for (int x = beginMazeIdx.x(); x <= endMazeIdx.x(); x++) {
+      int idx = getIdx(x, y, z);
+      openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
+      node->set_is_used(true);
+    }
+  } else if (beginMazeIdx.x() == endMazeIdx.x()
+             && beginMazeIdx.y() == endMazeIdx.y()) {
+    // 跨层走线
+    int x = beginMazeIdx.x();
+    int y = beginMazeIdx.y();
+    for (int z = beginMazeIdx.z(); z <= endMazeIdx.x(); z++) {
+      int idx = getIdx(x, y, z);
+      openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
+      node->set_is_used(true);
+    }
+  }
+}
+
+void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
 {
   int xDim, yDim, zDim;
   getDim(xDim, yDim, zDim);
@@ -538,7 +574,7 @@ void FlexGridGraph::dump(xroute::net_ordering::Request* req)
 
     for (int y = 0; y < yDim; y++) {
       for (int x = 0; x < xDim; x++) {
-        xroute::net_ordering::Node* node = req->add_nodes();
+        openroad_api::net_ordering::Node* node = req->add_nodes();
 
         node->set_maze_x(x);
         node->set_maze_y(y);
@@ -552,8 +588,8 @@ void FlexGridGraph::dump(xroute::net_ordering::Request* req)
 
         // 先设置部分值
         bool isBlockage = isAllBlocked(x, y, z);
-        node->set_type(isBlockage ? xroute::net_ordering::BLOCKAGE
-                                 : xroute::net_ordering::NORMAL);
+        node->set_type(isBlockage ? openroad_api::net_ordering::BLOCKAGE
+                                 : openroad_api::net_ordering::NORMAL);
         node->set_is_used(isBlockage);
 
 //        frDirEnum frDirEnumAllCustom[] = {frDirEnum::E,
@@ -573,4 +609,89 @@ void FlexGridGraph::dump(xroute::net_ordering::Request* req)
       }
     }
   }
+
+  // 统计 violation
+  auto gcWorker_ = drWorker_->getGCWorker();
+
+  gcWorker_->resetTargetNet();
+  gcWorker_->setEnableSurgicalFix(true);
+  gcWorker_->main();
+  gcWorker_->end();
+
+  int numMarkers = 0;
+  for (auto& uMarker : gcWorker_->getMarkers()) {
+    auto& marker = *uMarker;
+    if (drWorker_->getDrcBox().intersects(marker.getBBox())) {
+      numMarkers++;
+    }
+  }
+
+  unsigned long violation = numMarkers;
+  unsigned long wireLength = 0;
+  unsigned long via = 0;
+
+  // 获取当前 drWorker 所有 nets 的信息
+  for (auto& net : drWorker_->getNets()) {
+    int pinIdx = -1;
+
+    for (auto& pin : net->getPins()) {
+      pinIdx++;
+
+      // 获取当前 net 在 outerNetMap 中的索引
+      int netIdx;
+      auto outerNetMap = drWorker_->getOuterNetMap();
+      for (auto it = outerNetMap.begin(); it != outerNetMap.end(); ++it) {
+        if (it->second == net.get()) {
+          netIdx = it->first;
+          break;
+        }
+      }
+
+      for (auto& ap : pin->getAccessPatterns()) {
+        FlexMazeIdx mi = ap->getMazeIdx();
+        int idx = getIdx(mi.x(), mi.y(), mi.z());
+        openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
+        node->set_type(openroad_api::net_ordering::ACCESS);
+        node->set_net(netIdx);
+        node->set_pin(pinIdx);
+      }
+    }
+
+    for (auto& connFig : net->getRouteConnFigs()) {
+      if (connFig->typeId() == drcPathSeg) {
+        auto pathSeg = static_cast<drPathSeg*>(connFig.get());
+
+        // 记录已使用的点
+        FlexMazeIdx beginMazeIdx, endMazeIdx;
+        std::tie(beginMazeIdx, endMazeIdx) = pathSeg->getMazeIdx();
+        setUsedPointsForDump(req, beginMazeIdx, endMazeIdx);
+
+        // 记录线长
+        auto [bp, ep] = pathSeg->getPoints();
+        frCoord pathSegLen = Point::manhattanDistance(ep, bp);
+        wireLength += pathSegLen;
+      } else if (connFig->typeId() == drcVia) {
+        auto viaSeg = static_cast<drVia*>(connFig.get());
+
+        // 记录已使用的点
+        FlexMazeIdx beginMazeIdx, endMazeIdx;
+        std::tie(beginMazeIdx, endMazeIdx) = viaSeg->getMazeIdx();
+        setUsedPointsForDump(req, beginMazeIdx, endMazeIdx);
+
+        // 记录过孔数量
+        via++;
+      }
+    }
+
+    req->set_reward_violation(violation);
+    req->set_reward_wire_length(wireLength);
+    req->set_reward_via(via);
+  }
+
+  drWorker_->getLogger()->info(DRT,
+                998,
+                "Current violation {}, wireLength {}, via {}.",
+                violation,
+                wireLength,
+                via);
 }

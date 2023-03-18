@@ -2,10 +2,7 @@
 // Created by zarkin404 on 2023/2/1.
 //
 
-#ifndef _OPENROAD_MQ_H_
-#define _OPENROAD_MQ_H_
-
-#endif  // _OPENROAD_MQ_H_
+#pragma once
 
 #include <zmq.hpp>
 
