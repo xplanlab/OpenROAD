@@ -32,3 +32,5 @@ cmake-build-*/
 
 coverage-output
 messages.txt
+
+.clion.source.upload.marker
