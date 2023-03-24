@@ -37,7 +37,7 @@
 #include "dr/FlexWavefront.h"
 #include "frBaseTypes.h"
 #include "frDesign.h"
-#include "openroad_api/proto/net_ordering.pb.h"
+#include "net_ordering.pb.h"
 
 namespace fr {
 class FlexDRWorker;

@@ -44,7 +44,7 @@
 #include "frDesign.h"
 #include "gc/FlexGC.h"
 #include "utl/MQ.h"
-#include "openroad_api/proto/net_ordering.pb.h"
+#include "net_ordering.pb.h"
 
 using Rectangle = boost::polygon::rectangle_data<int>;
 namespace dst {
