@@ -1677,6 +1677,7 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq, bool isDone)
   if (isDone) {
     logger_->info(DRT, 994, "Sending done message...");
     mq.request(reqStr);
+    return -1;
   } else {
     while (true) {
       logger_->info(DRT, 997, "Requesting net order...");
