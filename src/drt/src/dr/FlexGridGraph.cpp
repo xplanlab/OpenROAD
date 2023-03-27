@@ -630,6 +630,12 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
   unsigned long wireLength = 0;
   unsigned long via = 0;
 
+  // 交换 key-value 以便快速查找网络对应的外部下标
+  map<drNet *, unsigned int> outerNetMapExchanged;
+  for (const auto& [key, value] : drWorker_->getOuterNetMap()) {
+    outerNetMapExchanged[value] = key;
+  }
+
   // 获取当前 drWorker 所有 nets 的信息
   for (auto& net : drWorker_->getNets()) {
     int pinIdx = -1;
@@ -637,22 +643,12 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
     for (auto& pin : net->getPins()) {
       pinIdx++;
 
-      // 获取当前 net 在 outerNetMap 中的索引
-      int netIdx;
-      auto outerNetMap = drWorker_->getOuterNetMap();
-      for (auto it = outerNetMap.begin(); it != outerNetMap.end(); ++it) {
-        if (it->second == net.get()) {
-          netIdx = it->first;
-          break;
-        }
-      }
-
       for (auto& ap : pin->getAccessPatterns()) {
         FlexMazeIdx mi = ap->getMazeIdx();
         int idx = getIdx(mi.x(), mi.y(), mi.z());
         openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
         node->set_type(openroad_api::net_ordering::ACCESS);
-        node->set_net(netIdx);
+        node->set_net(outerNetMapExchanged[net.get()]);
         node->set_pin(pinIdx);
       }
     }

@@ -1659,7 +1659,8 @@ void FlexDRWorker::identifyCongestionLevel()
   }
 }
 
-int FlexDRWorker::queryNetOrder(utl::MQ& mq, bool isDone)
+int FlexDRWorker::queryNetOrder(utl::MQ& mq,
+                                vector<unsigned int> outerNetIdxRemaining)
 {
   openroad_api::net_ordering::Message msg;
   openroad_api::net_ordering::Request* req = msg.mutable_request();
@@ -1667,14 +1668,17 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq, bool isDone)
   // 获取 gridGraph 的数据
   gridGraph_.dump(req);
 
-  if (isDone) {
+  req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
+                                outerNetIdxRemaining.end()});
+
+  if (outerNetIdxRemaining.empty()) {
     req->set_is_done(true);
   }
 
   int selectedNetIdx;
   string reqStr = msg.SerializeAsString();
 
-  if (isDone) {
+  if (outerNetIdxRemaining.empty()) {
     logger_->info(DRT, 994, "Sending done message...");
     mq.request(reqStr);
     return -1;
@@ -1705,21 +1709,22 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
   if (debugSettings_->useApiNetOrdering) {
     utl::MQ mq{"tcp://" + debugSettings_->apiHost};
 
+    // 待布网络下标
+    vector<unsigned int> outerNetIdxRemaining;
+    // 构建外部 net 的索引
     map<unsigned int, drNet*> outerNetMap;
-
     int outerNetIdx = 0;
-    for (auto& net : nets_) {
+    for (auto& net : getNets()) {
       if (net->getPins().size() > 1) {
+        outerNetIdxRemaining.push_back(outerNetIdx);
         outerNetMap[outerNetIdx] = net.get();
         outerNetIdx++;
       }
     }
-
     setOuterNetMap(outerNetMap);
 
-    int routedCnt = 0;
-    while (routedCnt < outerNetMap.size()) {
-      int selectedNetIdx = queryNetOrder(mq, false);
+    while (!outerNetIdxRemaining.empty()) {
+      int selectedNetIdx = queryNetOrder(mq, outerNetIdxRemaining);
       drNet* net = outerNetMap[selectedNetIdx];
 
       net->setModified(true);
@@ -1753,7 +1758,14 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       }
 
       mazeNetEnd(net);
-      routedCnt++;
+
+      // 从待布网络中移除
+      auto it = std::find(outerNetIdxRemaining.begin(),
+                          outerNetIdxRemaining.end(),
+                          selectedNetIdx);
+      if (it != outerNetIdxRemaining.end()) {
+        outerNetIdxRemaining.erase(it);
+      }
 
       gcWorker_->setTargetNet(net->getFrNet());
       gcWorker_->updateDRNet(net);
@@ -1785,8 +1797,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       route_queue_addMarkerCost(gcWorker_->getMarkers());
 
       // 如果已经完成布线，则发送 done 消息
-      if (routedCnt == outerNetMap.size()) {
-        queryNetOrder(mq, true);
+      if (outerNetIdxRemaining.empty()) {
+        queryNetOrder(mq, outerNetIdxRemaining);
       }
     }
   } else {
