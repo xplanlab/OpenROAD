@@ -308,6 +308,10 @@ struct frDebugSettings
         x(-1),
         y(-1),
         iter(0),
+        customStrategies(false),
+        customSize(0),
+        customOffset(0),
+        useApiNetOrdering(false),
         paMarkers(false),
         paEdge(false),
         paCommit(false),
@@ -336,6 +340,11 @@ struct frDebugSettings
   int x;
   int y;
   int iter;
+  bool customStrategies;
+  int customSize;
+  int customOffset;
+  std::string apiHost;
+  bool useApiNetOrdering;
   bool paMarkers;
   bool paEdge;
   bool paCommit;

@@ -454,8 +454,8 @@ void FlexDR::getBatchInfo(int& batchStepX, int& batchStepY)
 void FlexDR::searchRepair(const SearchRepairArgs& args)
 {
   const int iter = iter_++;
-  const int size = args.size;
-  const int offset = args.offset;
+  int size = args.size;
+  int offset = args.offset;
   const int mazeEndIter = args.mazeEndIter;
   const frUInt4 workerDRCCost = args.workerDRCCost;
   const frUInt4 workerMarkerCost = args.workerMarkerCost;
@@ -463,6 +463,11 @@ void FlexDR::searchRepair(const SearchRepairArgs& args)
   const float workerMarkerDecay = args.workerMarkerDecay;
   const int ripupMode = args.ripupMode;
   const bool followGuide = args.followGuide;
+
+  if (router_->getDebugSettings()->customStrategies) {
+    size = router_->getDebugSettings()->customSize;
+    offset = router_->getDebugSettings()->customOffset;
+  }
 
   std::string profile_name("DR:searchRepair");
   profile_name += std::to_string(iter);

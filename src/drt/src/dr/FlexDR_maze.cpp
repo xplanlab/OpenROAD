@@ -1702,9 +1702,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  if (debugSettings_->debugDR) {
-    // TODO 加入 taskId 避免算法端被乱发
-    utl::MQ mq{"tcp://127.0.0.1:5555"};
+  if (debugSettings_->useApiNetOrdering) {
+    utl::MQ mq{"tcp://" + debugSettings_->apiHost};
 
     map<unsigned int, drNet*> outerNetMap;
 

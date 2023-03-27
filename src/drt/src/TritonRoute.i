@@ -159,11 +159,16 @@ set_detailed_route_debug_cmd(const char* net_name,
                              bool maze,
                              int x, int y,
                              int iter,
+                             bool custom_strategies,
+                             int custom_size,
+                             int custom_offset,
                              bool pa_markers,
                              bool pa_edge,
                              bool pa_commit,
                              const char* dumpDir,
-                             bool ta)
+                             bool ta,
+                             const char* api_host,
+                             bool use_api_net_ordering)
 {
   auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
   router->setDebugNetName(net_name);
@@ -176,10 +181,15 @@ set_detailed_route_debug_cmd(const char* net_name,
     router->setDebugWorker(x, y);
   }
   router->setDebugIter(iter);
+  router->setCustomStrategies(custom_strategies);
+  router->setCustomSize(custom_size);
+  router->setCustomOffset(custom_offset);
   router->setDebugPaMarkers(pa_markers);
   router->setDebugPaEdge(pa_edge);
   router->setDebugPaCommit(pa_commit);
   router->setDebugTA(ta);
+  router->setApiHost(api_host);
+  router->setUseApiNetOrdering(use_api_net_ordering);
 }
 
 void

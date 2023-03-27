@@ -156,6 +156,31 @@ void TritonRoute::setDebugIter(int iter)
   debug_->iter = iter;
 }
 
+void TritonRoute::setCustomStrategies(bool on)
+{
+  debug_->customStrategies = on;
+}
+
+void TritonRoute::setCustomSize(int customSize)
+{
+  debug_->customSize = customSize;
+}
+
+void TritonRoute::setCustomOffset(int customOffset)
+{
+  debug_->customOffset = customOffset;
+}
+
+void TritonRoute::setApiHost(const std::string& apiHost)
+{
+  debug_->apiHost = apiHost;
+}
+
+void TritonRoute::setUseApiNetOrdering(bool on)
+{
+  debug_->useApiNetOrdering = on;
+}
+
 void TritonRoute::setDebugPaMarkers(bool on)
 {
   debug_->paMarkers = on;

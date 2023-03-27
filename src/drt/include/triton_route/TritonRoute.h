@@ -131,6 +131,11 @@ class TritonRoute
   void setDebugPinName(const char* name);  // for PA
   void setDebugWorker(int x, int y);
   void setDebugIter(int iter);
+  void setCustomStrategies(bool on = true);
+  void setCustomSize(int customSize);
+  void setCustomOffset(int customOffset);
+  void setApiHost(const std::string& apiHost);
+  void setUseApiNetOrdering(bool on = true);
   void setDebugPaMarkers(bool on = true);
   void setDebugWorkerParams(int mazeEndIter,
                             int drcCost,
