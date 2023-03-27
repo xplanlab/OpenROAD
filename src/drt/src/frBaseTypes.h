@@ -311,7 +311,8 @@ struct frDebugSettings
         customStrategies(false),
         customSize(0),
         customOffset(0),
-        useApiNetOrdering(false),
+        netOrderingUseApi(false),
+        netOrderingTrain(false),
         paMarkers(false),
         paEdge(false),
         paCommit(false),
@@ -344,7 +345,8 @@ struct frDebugSettings
   int customSize;
   int customOffset;
   std::string apiHost;
-  bool useApiNetOrdering;
+  bool netOrderingUseApi;
+  bool netOrderingTrain;
   bool paMarkers;
   bool paEdge;
   bool paCommit;

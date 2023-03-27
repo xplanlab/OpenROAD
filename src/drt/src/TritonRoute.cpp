@@ -176,9 +176,14 @@ void TritonRoute::setApiHost(const std::string& apiHost)
   debug_->apiHost = apiHost;
 }
 
-void TritonRoute::setUseApiNetOrdering(bool on)
+void TritonRoute::setNetOrderingUseApi(bool on)
 {
-  debug_->useApiNetOrdering = on;
+  debug_->netOrderingUseApi = on;
+}
+
+void TritonRoute::setNetOrderingTrain(bool on)
+{
+  debug_->netOrderingTrain = on;
 }
 
 void TritonRoute::setDebugPaMarkers(bool on)

@@ -168,7 +168,8 @@ set_detailed_route_debug_cmd(const char* net_name,
                              const char* dumpDir,
                              bool ta,
                              const char* api_host,
-                             bool use_api_net_ordering)
+                             bool net_ordering_use_api,
+                             bool net_ordering_train)
 {
   auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
   router->setDebugNetName(net_name);
@@ -189,7 +190,8 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setDebugPaCommit(pa_commit);
   router->setDebugTA(ta);
   router->setApiHost(api_host);
-  router->setUseApiNetOrdering(use_api_net_ordering);
+  router->setNetOrderingUseApi(net_ordering_use_api);
+  router->setNetOrderingTrain(net_ordering_train);
 }
 
 void

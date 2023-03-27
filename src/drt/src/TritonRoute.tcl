@@ -225,7 +225,7 @@ proc detailed_route_debug { args } {
       keys {-net -worker -iter -pin -dump_dir -custom_size -custom_offset \
             -api_host} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
-             -custom_strategies -use_api_net_ordering}
+             -custom_strategies -net_ordering_use_api -net_ordering_train}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
@@ -238,7 +238,8 @@ proc detailed_route_debug { args } {
   set pa_commit [info exists flags(-pa_commit)]
   set ta [info exists flags(-ta)]
   set custom_strategies [info exists flags(-custom_strategies)]
-  set use_api_net_ordering [info exists flags(-use_api_net_ordering)]
+  set net_ordering_use_api [info exists flags(-net_ordering_use_api)]
+  set net_ordering_train [info exists flags(-net_ordering_train)]
 
   if { [info exists keys(-net)] } {
     set net_name $keys(-net)
@@ -286,7 +287,7 @@ proc detailed_route_debug { args } {
     set custom_offset 0
   }
 
-  if { $use_api_net_ordering } {
+  if { $net_ordering_use_api } {
     set api_host $keys(-api_host)
   } else {
     set api_host ""
@@ -295,7 +296,7 @@ proc detailed_route_debug { args } {
   drt::set_detailed_route_debug_cmd $net_name $pin_name $dr $dump_dr $pa $maze \
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
       $pa_markers $pa_edge $pa_commit $dump_dir $ta $api_host \
-      $use_api_net_ordering
+      $net_ordering_use_api $net_ordering_train
 }
 
 sta::define_cmd_args "pin_access" {

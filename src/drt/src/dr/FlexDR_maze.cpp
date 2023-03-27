@@ -1706,7 +1706,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  if (debugSettings_->useApiNetOrdering) {
+  if (debugSettings_->netOrderingUseApi) {
     utl::MQ mq{"tcp://" + debugSettings_->apiHost};
 
     // 待布网络下标
@@ -1796,8 +1796,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       route_queue_markerCostDecay();
       route_queue_addMarkerCost(gcWorker_->getMarkers());
 
-      // 如果已经完成布线，则发送 done 消息
-      if (outerNetIdxRemaining.empty()) {
+      // 如果是在训练模式下已经完成布线，则发送 done 消息
+      if (debugSettings_->netOrderingTrain && outerNetIdxRemaining.empty()) {
         queryNetOrder(mq, outerNetIdxRemaining);
       }
     }

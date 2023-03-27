@@ -135,7 +135,8 @@ class TritonRoute
   void setCustomSize(int customSize);
   void setCustomOffset(int customOffset);
   void setApiHost(const std::string& apiHost);
-  void setUseApiNetOrdering(bool on = true);
+  void setNetOrderingUseApi(bool on = true);
+  void setNetOrderingTrain(bool on = true);
   void setDebugPaMarkers(bool on = true);
   void setDebugWorkerParams(int mazeEndIter,
                             int drcCost,
