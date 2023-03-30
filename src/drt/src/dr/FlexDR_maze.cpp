@@ -1802,8 +1802,21 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       }
     }
   } else {
-    while (!rerouteQueue.empty()) {
-      // 使用 openroad 自身的基于优先队列的网络排序算法
+    int initNetCnt = rerouteQueue.size();
+    int finishedNetCnt = 0;
+
+    while (true) {
+      if (debugSettings_->skipReroute) {
+        if (finishedNetCnt == initNetCnt) {
+          break;
+        } else {
+          finishedNetCnt++;
+        }
+      } else {
+        if (rerouteQueue.empty()) {
+          break;
+        }
+      }
 
       auto& entry = rerouteQueue.front();
       frBlockObject* obj = entry.block;

@@ -1122,6 +1122,8 @@ int FlexDR::main()
   init();
   frTime t;
 
+  int breakIter = router_->getDebugSettings()->breakIter;
+
   for (auto& args : strategy()) {
     int clipSize = args.size;
     if (args.ripupMode != 1) {
@@ -1145,6 +1147,10 @@ int FlexDR::main()
       writer.updateDb(db_);
       ord::OpenRoad::openRoad()->writeDb(
           fmt::format("drt_iter{}.odb", iter_ - 1).c_str());
+    }
+
+    if (breakIter > -1 && breakIter + 1 <= iter_) {
+      break;
     }
   }
 

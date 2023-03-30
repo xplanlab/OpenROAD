@@ -162,11 +162,14 @@ set_detailed_route_debug_cmd(const char* net_name,
                              bool custom_strategies,
                              int custom_size,
                              int custom_offset,
+                             int break_iter,
                              bool pa_markers,
                              bool pa_edge,
                              bool pa_commit,
                              const char* dumpDir,
                              bool ta,
+                             bool skip_reroute,
+                             bool skip_sort_reroute_nets,
                              const char* api_host,
                              bool net_ordering_use_api,
                              bool net_ordering_train)
@@ -185,10 +188,13 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setCustomStrategies(custom_strategies);
   router->setCustomSize(custom_size);
   router->setCustomOffset(custom_offset);
+  router->setBreakIter(break_iter);
   router->setDebugPaMarkers(pa_markers);
   router->setDebugPaEdge(pa_edge);
   router->setDebugPaCommit(pa_commit);
   router->setDebugTA(ta);
+  router->setSkipReroute(skip_reroute);
+  router->setSkipSortRerouteNets(skip_sort_reroute_nets);
   router->setApiHost(api_host);
   router->setNetOrderingUseApi(net_ordering_use_api);
   router->setNetOrderingTrain(net_ordering_train);

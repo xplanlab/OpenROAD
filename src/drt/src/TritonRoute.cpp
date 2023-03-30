@@ -171,6 +171,21 @@ void TritonRoute::setCustomOffset(int customOffset)
   debug_->customOffset = customOffset;
 }
 
+void TritonRoute::setBreakIter(int breakIter)
+{
+  debug_->breakIter = breakIter;
+}
+
+void TritonRoute::setSkipReroute(bool on)
+{
+  debug_->skipReroute = on;
+}
+
+void TritonRoute::setSkipSortRerouteNets(bool on)
+{
+  debug_->skipSortRerouteNets = on;
+}
+
 void TritonRoute::setApiHost(const std::string& apiHost)
 {
   debug_->apiHost = apiHost;

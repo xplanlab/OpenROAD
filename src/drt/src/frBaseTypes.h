@@ -311,6 +311,9 @@ struct frDebugSettings
         customStrategies(false),
         customSize(0),
         customOffset(0),
+        breakIter(-1),
+        skipReroute(false),
+        skipSortRerouteNets(false),
         netOrderingUseApi(false),
         netOrderingTrain(false),
         paMarkers(false),
@@ -344,6 +347,9 @@ struct frDebugSettings
   bool customStrategies;
   int customSize;
   int customOffset;
+  int breakIter;
+  bool skipReroute;
+  bool skipSortRerouteNets;
   std::string apiHost;
   bool netOrderingUseApi;
   bool netOrderingTrain;

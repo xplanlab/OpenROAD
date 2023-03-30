@@ -134,6 +134,9 @@ class TritonRoute
   void setCustomStrategies(bool on = true);
   void setCustomSize(int customSize);
   void setCustomOffset(int customOffset);
+  void setBreakIter(int breakIter);
+  void setSkipReroute(bool on = true);
+  void setSkipSortRerouteNets(bool on = true);
   void setApiHost(const std::string& apiHost);
   void setNetOrderingUseApi(bool on = true);
   void setNetOrderingTrain(bool on = true);
