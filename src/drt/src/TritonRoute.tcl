@@ -293,7 +293,7 @@ proc detailed_route_debug { args } {
   if { [info exists keys(-break_iter)] } {
     set break_iter $keys(-break_iter)
   } else {
-    set break_iter 0
+    set break_iter -1
   }
 
   if { $net_ordering_use_api } {
