@@ -313,7 +313,7 @@ struct frDebugSettings
         customOffset(0),
         breakIter(-1),
         skipReroute(false),
-        skipSortRerouteNets(false),
+        rerouteNetsSortMode(0),
         netOrderingUseApi(false),
         netOrderingTrain(false),
         paMarkers(false),
@@ -349,7 +349,7 @@ struct frDebugSettings
   int customOffset;
   int breakIter;
   bool skipReroute;
-  bool skipSortRerouteNets;
+  int rerouteNetsSortMode;
   std::string apiHost;
   bool netOrderingUseApi;
   bool netOrderingTrain;

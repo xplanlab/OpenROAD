@@ -169,7 +169,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              const char* dumpDir,
                              bool ta,
                              bool skip_reroute,
-                             bool skip_sort_reroute_nets,
+                             int reroute_nets_sort_mode,
                              const char* api_host,
                              bool net_ordering_use_api,
                              bool net_ordering_train)
@@ -194,7 +194,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setDebugPaCommit(pa_commit);
   router->setDebugTA(ta);
   router->setSkipReroute(skip_reroute);
-  router->setSkipSortRerouteNets(skip_sort_reroute_nets);
+  router->setRerouteNetsSortMode(reroute_nets_sort_mode);
   router->setApiHost(api_host);
   router->setNetOrderingUseApi(net_ordering_use_api);
   router->setNetOrderingTrain(net_ordering_train);

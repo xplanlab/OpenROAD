@@ -1609,6 +1609,7 @@ void FlexDRWorker::initNets_numPinsIn()
 {
   vector<rq_box_value_t<drPin*>> allPins;
   Point pt;
+  // 存所有 pin 的第一个 AP，如果有 prefAP，就替换为 prefAP，没有就用第一个 AP
   for (auto& net : nets_) {
     for (auto& pin : net->getPins()) {
       bool hasPrefAP = false;
@@ -1655,6 +1656,7 @@ void FlexDRWorker::initNets_numPinsIn()
         pt = firstAP->getPoint();
       }
 
+      // 所有 pin 脚所围成的最大矩形
       x1 = std::min(x1, pt.getX());
       x2 = std::max(x2, pt.getX());
       y1 = std::min(y1, pt.getY());
@@ -2544,9 +2546,7 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
     }
 
     // sort nets
-    if (!debugSettings_->skipSortRerouteNets) {
-      mazeIterInit_sortRerouteNets(0, ripupNets);
-    }
+    mazeIterInit_sortRerouteNets(0, ripupNets);
     for (auto& net : ripupNets) {
       routes.push_back({net, 0, true});
       // reserve via because all nets are ripupped

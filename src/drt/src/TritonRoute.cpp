@@ -181,9 +181,9 @@ void TritonRoute::setSkipReroute(bool on)
   debug_->skipReroute = on;
 }
 
-void TritonRoute::setSkipSortRerouteNets(bool on)
+void TritonRoute::setRerouteNetsSortMode(int sortMode)
 {
-  debug_->skipSortRerouteNets = on;
+  debug_->rerouteNetsSortMode = sortMode;
 }
 
 void TritonRoute::setApiHost(const std::string& apiHost)

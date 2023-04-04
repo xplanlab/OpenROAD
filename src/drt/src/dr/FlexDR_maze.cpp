@@ -1412,7 +1412,52 @@ void FlexDRWorker::modPathCost(drConnFig* connFig,
 bool FlexDRWorker::mazeIterInit_sortRerouteNets(int mazeIter,
                                                 vector<drNet*>& rerouteNets)
 {
-  auto rerouteNetsComp = [](drNet* const& a, drNet* const& b) {
+  int mode = debugSettings_->rerouteNetsSortMode;
+
+  // 重叠面积计算
+  map<int, unsigned long long> overlapAreas;
+  if (mode == 1) {
+    for (int i = 0; i < rerouteNets.size(); i++) {
+      drNet* netA = rerouteNets[i];
+
+      for (int j = i + 1; j < rerouteNets.size(); j++) {
+        drNet* netB = rerouteNets[j];
+
+        Rect boxA = netA->getPinBox();
+        Rect boxB = netB->getPinBox();
+        Rect overlapBox;
+        boxA.intersection(boxB, overlapBox);
+        unsigned long long area = overlapBox.area();
+
+        int netAId = netA->getId();
+        int netBId = netB->getId();
+
+        if (overlapAreas.find(netAId) == overlapAreas.end())
+          overlapAreas[netAId] = 0;
+        if (overlapAreas.find(netBId) == overlapAreas.end())
+          overlapAreas[netBId] = 0;
+
+        overlapAreas[netAId] += area;
+        overlapAreas[netBId] += area;
+      }
+    }
+
+    int nonOverlappingCnt = 0;
+    for (auto& [netId, overlapArea] : overlapAreas) {
+      if (overlapArea == 0) {
+        nonOverlappingCnt++;
+      }
+      logger_->info(DRT, 988, "Net id {} overlapping area {}.", netId, overlapArea);
+    }
+
+    logger_->info(DRT,
+                  989,
+                  "Non-overlapping count {}, about {}%.",
+                  nonOverlappingCnt,
+                  nonOverlappingCnt * 100.0 / overlapAreas.size());
+  }
+
+  auto rerouteNetsComp = [&mode, &overlapAreas](drNet* const& a, drNet* const& b) {
     if (a->getFrNet()->getAbsPriorityLvl() > b->getFrNet()->getAbsPriorityLvl())
       return true;
     if (a->getFrNet()->getAbsPriorityLvl() < b->getFrNet()->getAbsPriorityLvl())
@@ -1421,11 +1466,21 @@ bool FlexDRWorker::mazeIterInit_sortRerouteNets(int mazeIter,
     Rect boxB = b->getPinBox();
     auto areaA = boxA.area();
     auto areaB = boxB.area();
-    return (a->getNumPinsIn() == b->getNumPinsIn()
-                ? (areaA == areaB ? a->getId() < b->getId() : areaA < areaB)
-                : a->getNumPinsIn() < b->getNumPinsIn());
+
+    if (mode == 1) {
+      return (overlapAreas[a->getId()] == overlapAreas[b->getId()]
+                  ? (a->getNumPinsIn() == b->getNumPinsIn()
+                         ? (areaA == areaB ? a->getId() < b->getId()
+                                           : areaA < areaB)
+                         : a->getNumPinsIn() < b->getNumPinsIn())
+                  : overlapAreas[a->getId()] < overlapAreas[b->getId()]);
+    } else {
+      return (a->getNumPinsIn() == b->getNumPinsIn()
+                  ? (areaA == areaB ? a->getId() < b->getId() : areaA < areaB)
+                  : a->getNumPinsIn() < b->getNumPinsIn());
+    }
   };
-  // sort
+
   if (mazeIter == 0) {
     sort(rerouteNets.begin(), rerouteNets.end(), rerouteNetsComp);
     // to be removed
@@ -1439,6 +1494,31 @@ bool FlexDRWorker::mazeIterInit_sortRerouteNets(int mazeIter,
       }
     }
   }
+
+  logger_->info(DRT, 990, "RerouteNets sort mode: {}.", mode);
+  logger_->info(DRT, 991, "RerouteNets size: {}.", rerouteNets.size());
+
+  if (mode == 1) {
+    for (auto net: rerouteNets) {
+      logger_->info(DRT, 992, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}, overlapArea: {}.",
+                    net->getId(),
+                    net->getFrNet()->getName(),
+                    net->getFrNet()->getAbsPriorityLvl(),
+                    net->getNumPinsIn(),
+                    net->getPinBox().area(),
+                    overlapAreas[net->getId()]);
+    }
+  } else {
+    for (auto net: rerouteNets) {
+      logger_->info(DRT, 987, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}.",
+                    net->getId(),
+                    net->getFrNet()->getName(),
+                    net->getFrNet()->getAbsPriorityLvl(),
+                    net->getNumPinsIn(),
+                    net->getPinBox().area());
+    }
+  }
+
   return true;
 }
 
@@ -1693,7 +1773,7 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq,
       if (selectedNetIdx >= 0 && selectedNetIdx < nets_.size()) {
         break;
       } else {
-        logger_->info(DRT, 991, "Invalid net index {}.", selectedNetIdx);
+        logger_->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
       }
     }
     logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);

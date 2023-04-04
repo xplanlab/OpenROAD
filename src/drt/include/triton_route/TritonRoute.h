@@ -136,7 +136,7 @@ class TritonRoute
   void setCustomOffset(int customOffset);
   void setBreakIter(int breakIter);
   void setSkipReroute(bool on = true);
-  void setSkipSortRerouteNets(bool on = true);
+  void setRerouteNetsSortMode(int sortMode);
   void setApiHost(const std::string& apiHost);
   void setNetOrderingUseApi(bool on = true);
   void setNetOrderingTrain(bool on = true);
