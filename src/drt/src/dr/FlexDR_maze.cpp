@@ -1495,9 +1495,6 @@ bool FlexDRWorker::mazeIterInit_sortRerouteNets(int mazeIter,
     }
   }
 
-  logger_->info(DRT, 990, "RerouteNets sort mode: {}.", mode);
-  logger_->info(DRT, 991, "RerouteNets size: {}.", rerouteNets.size());
-
   if (VERBOSE > 1) {
     if (mode == 1) {
       for (auto net: rerouteNets) {
