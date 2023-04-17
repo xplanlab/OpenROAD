@@ -1498,24 +1498,26 @@ bool FlexDRWorker::mazeIterInit_sortRerouteNets(int mazeIter,
   logger_->info(DRT, 990, "RerouteNets sort mode: {}.", mode);
   logger_->info(DRT, 991, "RerouteNets size: {}.", rerouteNets.size());
 
-  if (mode == 1) {
-    for (auto net: rerouteNets) {
-      logger_->info(DRT, 992, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}, overlapArea: {}.",
-                    net->getId(),
-                    net->getFrNet()->getName(),
-                    net->getFrNet()->getAbsPriorityLvl(),
-                    net->getNumPinsIn(),
-                    net->getPinBox().area(),
-                    overlapAreas[net->getId()]);
-    }
-  } else {
-    for (auto net: rerouteNets) {
-      logger_->info(DRT, 987, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}.",
-                    net->getId(),
-                    net->getFrNet()->getName(),
-                    net->getFrNet()->getAbsPriorityLvl(),
-                    net->getNumPinsIn(),
-                    net->getPinBox().area());
+  if (VERBOSE > 1) {
+    if (mode == 1) {
+      for (auto net: rerouteNets) {
+        logger_->info(DRT, 992, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}, overlapArea: {}.",
+                      net->getId(),
+                      net->getFrNet()->getName(),
+                      net->getFrNet()->getAbsPriorityLvl(),
+                      net->getNumPinsIn(),
+                      net->getPinBox().area(),
+                      overlapAreas[net->getId()]);
+      }
+    } else {
+      for (auto net: rerouteNets) {
+        logger_->info(DRT, 987, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}.",
+                      net->getId(),
+                      net->getFrNet()->getName(),
+                      net->getFrNet()->getAbsPriorityLvl(),
+                      net->getNumPinsIn(),
+                      net->getPinBox().area());
+      }
     }
   }
 
