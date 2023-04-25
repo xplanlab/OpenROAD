@@ -1876,7 +1876,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       route_queue_addMarkerCost(gcWorker_->getMarkers());
     }
 
-    // 如果是在训练模式下已经完成布线，则发送 done 消息
+    // 如果是在训练模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息，
     if (debugSettings_->netOrderingTrain) {
       queryNetOrder(mq, outerNetIdxRemaining);
     }
