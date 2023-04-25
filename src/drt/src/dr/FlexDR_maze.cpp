@@ -1874,11 +1874,11 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
       route_queue_markerCostDecay();
       route_queue_addMarkerCost(gcWorker_->getMarkers());
+    }
 
-      // 如果是在训练模式下已经完成布线，则发送 done 消息
-      if (debugSettings_->netOrderingTrain && outerNetIdxRemaining.empty()) {
-        queryNetOrder(mq, outerNetIdxRemaining);
-      }
+    // 如果是在训练模式下已经完成布线，则发送 done 消息
+    if (debugSettings_->netOrderingTrain) {
+      queryNetOrder(mq, outerNetIdxRemaining);
     }
   } else {
     int initNetCnt = rerouteQueue.size();
