@@ -1777,7 +1777,7 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq,
 
         for (auto netId : outerNetIdxRemaining) {
           logger_->info(DRT,
-                        985,
+                        984,
                         "Outer net index {} remains, name {}.",
                         netId,
                         outerNetMap_[netId]->getFrNet()->getName());
