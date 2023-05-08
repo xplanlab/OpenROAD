@@ -1774,6 +1774,15 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq,
         break;
       } else if (selectedNetIdx == -1) {
         logger_->info(DRT, 986, "Outer thinks it has finished ordering.");
+
+        for (auto netId : outerNetIdxRemaining) {
+          logger_->info(DRT,
+                        985,
+                        "Outer net index {} remains, name {}.",
+                        netId,
+                        outerNetMap_[netId]->getFrNet()->getName());
+        }
+
         return -1;
       } else {
         logger_->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
