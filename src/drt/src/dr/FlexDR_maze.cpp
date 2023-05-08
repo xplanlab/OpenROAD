@@ -1770,16 +1770,15 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq,
 
       selectedNetIdx = msg.response().net_index();
       if (selectedNetIdx >= 0 && selectedNetIdx < nets_.size()) {
+        logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
         break;
       } else if (selectedNetIdx == -1) {
         logger_->info(DRT, 986, "Outer thinks it has finished ordering.");
         return -1;
       } else {
-          logger_->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
-        }
+        logger_->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
       }
     }
-    logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
 
     return selectedNetIdx;
   }
