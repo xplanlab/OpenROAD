@@ -511,6 +511,7 @@ void FlexDR::searchRepair(const SearchRepairArgs& args)
   vector<unique_ptr<FlexDRWorker>> uworkers;
   int batchStepX, batchStepY;
 
+  // 形成不邻接的 clips
   getBatchInfo(batchStepX, batchStepY);
 
   // 将不相邻的 clip 划分到统一队列中处理，假设有 3 * 3 大小的 clip，则 clip 在队列中的顺序为：

@@ -1771,8 +1771,12 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq,
       selectedNetIdx = msg.response().net_index();
       if (selectedNetIdx >= 0 && selectedNetIdx < nets_.size()) {
         break;
+      } else if (selectedNetIdx == -1) {
+        logger_->info(DRT, 986, "Outer thinks it has finished ordering.");
+        return -1;
       } else {
-        logger_->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
+          logger_->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
+        }
       }
     }
     logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
@@ -1802,8 +1806,30 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     }
     setOuterNetMap(outerNetMap);
 
+    int routeCount = 0;
+    for (auto& net : nets_) {
+      if (net->getPins().size() > 1) {
+        routeCount++;
+      }
+    }
+
+    logger_->info(DRT,
+                  985,
+                  "route_box {} 's netCount: {}, routeCount: {}, nodes: {}.",
+                  getRouteBox(),
+                  nets_.size(),
+                  routeCount,
+                  gridGraph_.xCoords_.size() * gridGraph_.yCoords_.size()
+                      * gridGraph_.zCoords_.size());
+
     while (!outerNetIdxRemaining.empty()) {
       int selectedNetIdx = queryNetOrder(mq, outerNetIdxRemaining);
+
+      // 强制跳过
+      if (selectedNetIdx == -1) {
+        break;
+      }
+
       drNet* net = outerNetMap[selectedNetIdx];
 
       net->setModified(true);
