@@ -1797,23 +1797,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  if (debugSettings_->netOrderingUseApi) {
-    utl::MQ mq{"tcp://" + debugSettings_->apiHost};
-
-    // 待布网络下标
-    vector<unsigned int> outerNetIdxRemaining;
-    // 构建外部 net 的索引
-    map<unsigned int, drNet*> outerNetMap;
-    int outerNetIdx = 0;
-    for (auto& net : getNets()) {
-      if (net->getPins().size() > 1) {
-        outerNetIdxRemaining.push_back(outerNetIdx);
-        outerNetMap[outerNetIdx] = net.get();
-        outerNetIdx++;
-      }
-    }
-    setOuterNetMap(outerNetMap);
-
+  if (VERBOSE > 1) {
     int routeNetCount = 0;
     int pinCount = 0;
     int routePinCount = 0;
@@ -1835,6 +1819,24 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
                   routePinCount,
                   gridGraph_.xCoords_.size() * gridGraph_.yCoords_.size()
                       * gridGraph_.zCoords_.size());
+  }
+
+  if (debugSettings_->netOrderingUseApi) {
+    utl::MQ mq{"tcp://" + debugSettings_->apiHost};
+
+    // 待布网络下标
+    vector<unsigned int> outerNetIdxRemaining;
+    // 构建外部 net 的索引
+    map<unsigned int, drNet*> outerNetMap;
+    int outerNetIdx = 0;
+    for (auto& net : getNets()) {
+      if (net->getPins().size() > 1) {
+        outerNetIdxRemaining.push_back(outerNetIdx);
+        outerNetMap[outerNetIdx] = net.get();
+        outerNetIdx++;
+      }
+    }
+    setOuterNetMap(outerNetMap);
 
     while (!outerNetIdxRemaining.empty()) {
       int selectedNetIdx = queryNetOrder(mq, outerNetIdxRemaining);
