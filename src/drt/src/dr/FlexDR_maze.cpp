@@ -1814,19 +1814,25 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     }
     setOuterNetMap(outerNetMap);
 
-    int routeCount = 0;
+    int routeNetCount = 0;
+    int pinCount = 0;
+    int routePinCount = 0;
     for (auto& net : nets_) {
+      pinCount += net->getPins().size();
       if (net->getPins().size() > 1) {
-        routeCount++;
+        routeNetCount++;
+        routePinCount += net->getPins().size();
       }
     }
 
     logger_->info(DRT,
                   985,
-                  "route_box {} 's netCount: {}, routeCount: {}, nodes: {}.",
+                  "route_box {} 's netCount: {}, routeNetCount: {}, pinCount: {}, routePinCount: {}, nodes: {}.",
                   getRouteBox(),
                   nets_.size(),
-                  routeCount,
+                  routeNetCount,
+                  pinCount,
+                  routePinCount,
                   gridGraph_.xCoords_.size() * gridGraph_.yCoords_.size()
                       * gridGraph_.zCoords_.size());
 
