@@ -1797,32 +1797,9 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  if (VERBOSE > 1) {
-    int routeNetCount = 0;
-    int pinCount = 0;
-    int routePinCount = 0;
-    for (auto& net : nets_) {
-      pinCount += net->getPins().size();
-      if (net->getPins().size() > 1) {
-        routeNetCount++;
-        routePinCount += net->getPins().size();
-      }
-    }
-
-    logger_->info(DRT,
-                  985,
-                  "route_box {} 's netCount: {}, routeNetCount: {}, pinCount: {}, routePinCount: {}, nodes: {}.",
-                  getRouteBox(),
-                  nets_.size(),
-                  routeNetCount,
-                  pinCount,
-                  routePinCount,
-                  gridGraph_.xCoords_.size() * gridGraph_.yCoords_.size()
-                      * gridGraph_.zCoords_.size());
-  }
-
   if (debugSettings_->netOrderingUseApi) {
-    utl::MQ mq{"tcp://" + debugSettings_->apiHost};
+    std::string addr = "tcp://" + debugSettings_->apiHost;
+    utl::MQ mq(addr);
 
     // 待布网络下标
     vector<unsigned int> outerNetIdxRemaining;
