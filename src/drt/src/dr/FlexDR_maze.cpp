@@ -1495,28 +1495,28 @@ bool FlexDRWorker::mazeIterInit_sortRerouteNets(int mazeIter,
     }
   }
 
-  if (VERBOSE > 1) {
-    if (mode == 1) {
-      for (auto net: rerouteNets) {
-        logger_->info(DRT, 992, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}, overlapArea: {}.",
-                      net->getId(),
-                      net->getFrNet()->getName(),
-                      net->getFrNet()->getAbsPriorityLvl(),
-                      net->getNumPinsIn(),
-                      net->getPinBox().area(),
-                      overlapAreas[net->getId()]);
-      }
-    } else {
-      for (auto net: rerouteNets) {
-        logger_->info(DRT, 987, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}.",
-                      net->getId(),
-                      net->getFrNet()->getName(),
-                      net->getFrNet()->getAbsPriorityLvl(),
-                      net->getNumPinsIn(),
-                      net->getPinBox().area());
-      }
-    }
-  }
+//  if (VERBOSE > 1) {
+//    if (mode == 1) {
+//      for (auto net: rerouteNets) {
+//        logger_->info(DRT, 992, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}, overlapArea: {}.",
+//                      net->getId(),
+//                      net->getFrNet()->getName(),
+//                      net->getFrNet()->getAbsPriorityLvl(),
+//                      net->getNumPinsIn(),
+//                      net->getPinBox().area(),
+//                      overlapAreas[net->getId()]);
+//      }
+//    } else {
+//      for (auto net: rerouteNets) {
+//        logger_->info(DRT, 987, "Net id: {}, name: {}, prior: {}, pinNum: {}, pinArea: {}.",
+//                      net->getId(),
+//                      net->getFrNet()->getName(),
+//                      net->getFrNet()->getAbsPriorityLvl(),
+//                      net->getNumPinsIn(),
+//                      net->getPinBox().area());
+//      }
+//    }
+//  }
 
   return true;
 }
@@ -1818,7 +1818,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     while (!outerNetIdxRemaining.empty()) {
       int selectedNetIdx = queryNetOrder(mq, outerNetIdxRemaining);
 
-      // 强制跳过
+      // 一旦接收到 -1 就强制跳过布线流程
       if (selectedNetIdx == -1) {
         break;
       }
@@ -1895,7 +1895,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       route_queue_addMarkerCost(gcWorker_->getMarkers());
     }
 
-    // 如果是在训练模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息，
+    // 如果是在训练模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
     if (debugSettings_->netOrderingTrain) {
       queryNetOrder(mq, outerNetIdxRemaining);
     }
