@@ -1799,7 +1799,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
   if (debugSettings_->netOrderingUseApi) {
     std::string addr = "tcp://" + debugSettings_->apiHost;
-    utl::MQ mq(addr);
+    utl::MQ mq(addr, debugSettings_->apiTimeout);
 
     // 待布网络下标
     vector<unsigned int> outerNetIdxRemaining;

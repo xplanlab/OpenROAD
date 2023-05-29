@@ -171,6 +171,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              bool skip_reroute,
                              int reroute_nets_sort_mode,
                              const char* api_host,
+                             int api_timeout,
                              bool net_ordering_use_api,
                              bool net_ordering_train)
 {
@@ -196,6 +197,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setSkipReroute(skip_reroute);
   router->setRerouteNetsSortMode(reroute_nets_sort_mode);
   router->setApiHost(api_host);
+  router->setApiTimeout(api_timeout);
   router->setNetOrderingUseApi(net_ordering_use_api);
   router->setNetOrderingTrain(net_ordering_train);
 }

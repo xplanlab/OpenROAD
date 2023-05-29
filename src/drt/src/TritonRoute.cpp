@@ -191,6 +191,11 @@ void TritonRoute::setApiHost(const std::string& apiHost)
   debug_->apiHost = apiHost;
 }
 
+void TritonRoute::setApiTimeout(int timeout)
+{
+  debug_->apiTimeout = timeout;
+}
+
 void TritonRoute::setNetOrderingUseApi(bool on)
 {
   debug_->netOrderingUseApi = on;
