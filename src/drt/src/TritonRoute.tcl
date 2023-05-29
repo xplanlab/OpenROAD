@@ -226,7 +226,7 @@ proc detailed_route_debug { args } {
             -break_iter -reroute_nets_sort_mode -api_host -api_timeout} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
              -custom_strategies -skip_reroute -net_ordering_use_api \
-             -net_ordering_train}
+             -net_ordering_training}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
@@ -242,7 +242,7 @@ proc detailed_route_debug { args } {
   set skip_reroute [info exists flags(-skip_reroute)]
   set skip_sort_reroute_nets [info exists flags(-skip_sort_reroute_nets)]
   set net_ordering_use_api [info exists flags(-net_ordering_use_api)]
-  set net_ordering_train [info exists flags(-net_ordering_train)]
+  set net_ordering_training [info exists flags(-net_ordering_training)]
 
   if { [info exists keys(-net)] } {
     set net_name $keys(-net)
@@ -314,7 +314,7 @@ proc detailed_route_debug { args } {
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
       $break_iter $pa_markers $pa_edge $pa_commit $dump_dir $ta $skip_reroute \
       $reroute_nets_sort_mode \
-      $api_host $api_timeout $net_ordering_use_api $net_ordering_train
+      $api_host $api_timeout $net_ordering_use_api $net_ordering_training
 }
 
 sta::define_cmd_args "pin_access" {

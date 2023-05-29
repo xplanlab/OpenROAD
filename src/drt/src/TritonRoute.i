@@ -173,7 +173,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              const char* api_host,
                              int api_timeout,
                              bool net_ordering_use_api,
-                             bool net_ordering_train)
+                             bool net_ordering_training)
 {
   auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
   router->setDebugNetName(net_name);
@@ -199,7 +199,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setApiHost(api_host);
   router->setApiTimeout(api_timeout);
   router->setNetOrderingUseApi(net_ordering_use_api);
-  router->setNetOrderingTrain(net_ordering_train);
+  router->setNetOrderingTraining(net_ordering_training);
 }
 
 void

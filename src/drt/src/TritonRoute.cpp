@@ -201,9 +201,9 @@ void TritonRoute::setNetOrderingUseApi(bool on)
   debug_->netOrderingUseApi = on;
 }
 
-void TritonRoute::setNetOrderingTrain(bool on)
+void TritonRoute::setNetOrderingTraining(bool on)
 {
-  debug_->netOrderingTrain = on;
+  debug_->netOrderingTraining = on;
 }
 
 void TritonRoute::setDebugPaMarkers(bool on)
