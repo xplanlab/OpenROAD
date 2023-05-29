@@ -1896,7 +1896,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     }
 
     // 如果是在训练模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
-    if (debugSettings_->netOrderingTrain) {
+    if (debugSettings_->netOrderingTraining) {
       queryNetOrder(mq, outerNetIdxRemaining);
     }
   } else {
