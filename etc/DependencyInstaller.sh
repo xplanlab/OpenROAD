@@ -18,6 +18,7 @@ _installCommonDev() {
     lemonVersion=1.3.1
     lemonChecksum="e89f887559113b68657eca67cf3329b5"
     spdlogVersion=1.8.1
+    libzmqVersion=4.3.4
     cppzmqVersion=4.8.1
 
     # temp dir to download and compile
@@ -123,7 +124,7 @@ _installCommonDev() {
     # zeromq
     if [[ ! -d /usr/local/lib/cmake/ZeroMQ/ ]]; then
         cd "${baseDir}"
-        git clone https://github.com/zeromq/libzmq.git
+        git clone -b "v${libzmqVersion}" https://github.com/zeromq/libzmq.git
         cd libzmq
         cmake -B build .
         cmake --build build -j $(nproc) --target install
@@ -134,7 +135,7 @@ _installCommonDev() {
     # cppzmq
     if [[ ! -d /usr/local/share/cmake/cppzmq/ ]]; then
       cd "${baseDir}"
-      git clone --depth 1 -b "v${cppzmqVersion}" https://github.com/zeromq/cppzmq.git
+      git clone -b "v${cppzmqVersion}" https://github.com/zeromq/cppzmq.git
       cd cppzmq
       cmake -B build .
       cmake --build build -j $(nproc) --target install
