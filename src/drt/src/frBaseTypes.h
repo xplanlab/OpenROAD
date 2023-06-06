@@ -312,6 +312,7 @@ struct frDebugSettings
         customSize(0),
         customOffset(0),
         breakIter(-1),
+        parallelWorkers(0),
         skipReroute(false),
         rerouteNetsSortMode(0),
         apiTimeout(0),
@@ -349,6 +350,7 @@ struct frDebugSettings
   int customSize;
   int customOffset;
   int breakIter;
+  int parallelWorkers;
   bool skipReroute;
   int rerouteNetsSortMode;
   std::string apiHost;

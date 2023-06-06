@@ -576,7 +576,11 @@ void FlexDR::searchRepair(const SearchRepairArgs& args)
     xIdx++;
   }
 
-  omp_set_num_threads(MAX_THREADS);
+  int parallelWorkers = router_->getDebugSettings()->parallelWorkers;
+  if (parallelWorkers <= 0) {
+    parallelWorkers = MAX_THREADS;
+  }
+  omp_set_num_threads(parallelWorkers);
   int version = 0;
   increaseClipsize_ = false;
   numWorkUnits_ = 0;

@@ -176,6 +176,11 @@ void TritonRoute::setBreakIter(int breakIter)
   debug_->breakIter = breakIter;
 }
 
+void TritonRoute::setParallelWorkers(int parallelWorkers)
+{
+  debug_->parallelWorkers = parallelWorkers;
+}
+
 void TritonRoute::setSkipReroute(bool on)
 {
   debug_->skipReroute = on;

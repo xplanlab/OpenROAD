@@ -223,7 +223,8 @@ sta::define_cmd_args "detailed_route_debug" {
 proc detailed_route_debug { args } {
   sta::parse_key_args "detailed_route_debug" args \
       keys {-net -worker -iter -pin -dump_dir -custom_size -custom_offset \
-            -break_iter -reroute_nets_sort_mode -api_host -api_timeout} \
+            -break_iter -parallel_workers -reroute_nets_sort_mode \
+            -api_host -api_timeout} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
              -custom_strategies -skip_reroute -net_ordering_use_api \
              -net_ordering_training}
@@ -296,6 +297,12 @@ proc detailed_route_debug { args } {
     set break_iter -1
   }
 
+  if { [info exists keys(-parallel_workers)] } {
+    set parallel_workers $keys(-parallel_workers)
+  } else {
+    set parallel_workers 0
+  }
+
   if { [info exists keys(-reroute_nets_sort_mode)] } {
     set reroute_nets_sort_mode $keys(-reroute_nets_sort_mode)
   } else {
@@ -312,9 +319,9 @@ proc detailed_route_debug { args } {
 
   drt::set_detailed_route_debug_cmd $net_name $pin_name $dr $dump_dr $pa $maze \
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
-      $break_iter $pa_markers $pa_edge $pa_commit $dump_dir $ta $skip_reroute \
-      $reroute_nets_sort_mode \
-      $api_host $api_timeout $net_ordering_use_api $net_ordering_training
+      $break_iter $parallel_workers $pa_markers $pa_edge $pa_commit $dump_dir \
+      $ta $skip_reroute $reroute_nets_sort_mode $api_host $api_timeout \
+      $net_ordering_use_api $net_ordering_training
 }
 
 sta::define_cmd_args "pin_access" {
