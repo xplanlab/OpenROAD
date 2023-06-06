@@ -201,7 +201,8 @@ _installUbuntuPackages() {
         libomp-dev \
         devscripts \
         debhelper \
-        libprotobuf-dev
+        libprotobuf-dev \
+        protobuf-compiler
 
     apt-get install -y \
         binutils \
