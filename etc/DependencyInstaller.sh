@@ -201,8 +201,7 @@ _installUbuntuPackages() {
         libomp-dev \
         devscripts \
         debhelper \
-        libprotobuf-dev \
-        protobuf-compiler
+        libprotobuf-dev
 
     apt-get install -y \
         binutils \
@@ -286,8 +285,7 @@ _installRHELPackages() {
         python3-devel \
         clang \
         clang-devel \
-        libprotobuf-dev \
-        protobuf-compiler
+        libprotobuf-dev
 
     yum install -y \
         http://repo.okay.com.mx/centos/8/x86_64/release/bison-3.0.4-10.el8.x86_64.rpm \
