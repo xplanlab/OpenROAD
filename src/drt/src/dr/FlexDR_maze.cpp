@@ -1797,7 +1797,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  if (debugSettings_->netOrderingUseApi) {
+  if (debugSettings_->apiHost != "") {
     std::string addr = "tcp://" + debugSettings_->apiHost;
     utl::MQ mq(addr, debugSettings_->apiTimeout);
 

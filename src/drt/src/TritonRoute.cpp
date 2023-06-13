@@ -201,11 +201,6 @@ void TritonRoute::setApiTimeout(int timeout)
   debug_->apiTimeout = timeout;
 }
 
-void TritonRoute::setNetOrderingUseApi(bool on)
-{
-  debug_->netOrderingUseApi = on;
-}
-
 void TritonRoute::setNetOrderingTraining(bool on)
 {
   debug_->netOrderingTraining = on;
