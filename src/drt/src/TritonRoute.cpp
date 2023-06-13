@@ -211,6 +211,11 @@ void TritonRoute::setNetOrderingTraining(bool on)
   debug_->netOrderingTraining = on;
 }
 
+void TritonRoute::setNetOrderingEvaluation(bool on)
+{
+  debug_->netOrderingEvaluation = on;
+}
+
 void TritonRoute::setDebugPaMarkers(bool on)
 {
   debug_->paMarkers = on;

@@ -318,6 +318,7 @@ struct frDebugSettings
         apiTimeout(0),
         netOrderingUseApi(false),
         netOrderingTraining(false),
+        netOrderingEvaluation(false),
         paMarkers(false),
         paEdge(false),
         paCommit(false),
@@ -357,6 +358,7 @@ struct frDebugSettings
   int apiTimeout;
   bool netOrderingUseApi;
   bool netOrderingTraining;
+  bool netOrderingEvaluation;
   bool paMarkers;
   bool paEdge;
   bool paCommit;

@@ -142,6 +142,7 @@ class TritonRoute
   void setApiTimeout(int timeout);
   void setNetOrderingUseApi(bool on = true);
   void setNetOrderingTraining(bool on = true);
+  void setNetOrderingEvaluation(bool on = true);
   void setDebugPaMarkers(bool on = true);
   void setDebugWorkerParams(int mazeEndIter,
                             int drcCost,
