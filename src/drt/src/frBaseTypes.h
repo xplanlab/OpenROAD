@@ -315,9 +315,9 @@ struct frDebugSettings
         parallelWorkers(0),
         skipReroute(false),
         rerouteNetsSortMode(0),
-        apiTimeout(0),
+        apiTimeout(30000),
         netOrderingTraining(false),
-        netOrderingEvaluation(false),
+        netOrderingEvaluation(0),
         paMarkers(false),
         paEdge(false),
         paCommit(false),
@@ -356,7 +356,7 @@ struct frDebugSettings
   std::string apiHost;
   int apiTimeout;
   bool netOrderingTraining;
-  bool netOrderingEvaluation;
+  int netOrderingEvaluation;
   bool paMarkers;
   bool paEdge;
   bool paCommit;

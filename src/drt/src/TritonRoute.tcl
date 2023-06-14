@@ -224,10 +224,10 @@ proc detailed_route_debug { args } {
   sta::parse_key_args "detailed_route_debug" args \
       keys {-net -worker -iter -pin -dump_dir -custom_size -custom_offset \
             -break_iter -parallel_workers -reroute_nets_sort_mode \
-            -api_host -api_timeout} \
+            -api_host -api_timeout -net_ordering_evaluation} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
              -custom_strategies -skip_reroute \
-             -net_ordering_training -net_ordering_evaluation}
+             -net_ordering_training}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
@@ -243,7 +243,6 @@ proc detailed_route_debug { args } {
   set skip_reroute [info exists flags(-skip_reroute)]
   set skip_sort_reroute_nets [info exists flags(-skip_sort_reroute_nets)]
   set net_ordering_training [info exists flags(-net_ordering_training)]
-  set net_ordering_evaluation [info exists flags(-net_ordering_evaluation)]
 
   if { [info exists keys(-net)] } {
     set net_name $keys(-net)
@@ -301,6 +300,12 @@ proc detailed_route_debug { args } {
     set parallel_workers $keys(-parallel_workers)
   } else {
     set parallel_workers 0
+  }
+
+  if { [info exists keys(-net_ordering_evaluation)] } {
+    set net_ordering_evaluation $keys(-net_ordering_evaluation)
+  } else {
+    set net_ordering_evaluation 0
   }
 
   if { [info exists keys(-reroute_nets_sort_mode)] } {

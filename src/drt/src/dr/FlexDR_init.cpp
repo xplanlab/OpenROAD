@@ -2531,6 +2531,7 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
 
   if (getRipupMode() == 0) {
     for (auto& marker : markers_) {
+      // checks 中的元素为的本轮不布的网络
       route_queue_update_from_marker(
           &marker, uniqueVictims, uniqueAggressors, checks, routes);
     }
@@ -2557,6 +2558,82 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
   } else {
     cout << "Error: unsupported ripup mode\n";
   }
+
+  vector<unsigned int> customOrder; // 记录算法端给出的排序
+  vector<RouteQueueEntry> customOrderRoutes;  // 记录即将替换掉初始排序的临时序列
+
+  // 当推断模式为「替换初始排序」时，使用算法排序好的序列
+  if (debugSettings_->apiHost != ""
+      && debugSettings_->netOrderingEvaluation == 2) {
+    std::string addr = "tcp://" + debugSettings_->apiHost;
+    utl::MQ mq(addr, debugSettings_->apiTimeout);
+
+    // 先将不需要布线的网络放到队列
+    for (auto& entry : checks) {
+      customOrderRoutes.push_back(entry);
+    }
+
+    // 原顺序为 | routes | checks ，现在为 | checks | routes (#pin < 2) | routes (#pin >= 2)
+
+    // 待布网络下标
+    vector<unsigned int> outerNetIdxRemaining;
+    // 构建外部 net 的索引
+    map<unsigned int, drNet*> outerNetMap;
+    int outerNetIdx = 0;
+    for (auto& entry : routes) {
+      frBlockObject* obj = entry.block;
+      bool doRoute = entry.doRoute;
+
+      if (doRoute) {
+        auto net = static_cast<drNet*>(obj);
+        if (net->getPins().size() > 1) {
+          outerNetIdxRemaining.push_back(outerNetIdx);
+          outerNetMap[outerNetIdx] = net;
+          outerNetIdx++;
+        } else {
+          customOrderRoutes.push_back(entry);
+        }
+      } else {
+        customOrderRoutes.push_back(entry);
+      }
+    }
+
+    // 仅处理有 1 个待布网络以上的情况
+    if (outerNetIdxRemaining.size() > 1) {
+      setOuterNetMap(outerNetMap);
+
+      openroad_api::net_ordering::Message msg;
+      openroad_api::net_ordering::Request* req = msg.mutable_request();
+
+      // 获取 gridGraph 的数据
+      gridGraph_.dump(req);
+
+      req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
+                                     outerNetIdxRemaining.end()});
+
+      string reqStr = msg.SerializeAsString();
+      logger_->info(DRT, 991, "Requesting initial net order...");
+      string res = mq.request(reqStr);
+      msg = openroad_api::net_ordering::Message();
+      msg.ParseFromString(res);
+      auto netOrder = msg.response().net_list();
+
+      for (auto& netIdx : netOrder) {
+        customOrder.push_back(netIdx);
+      }
+    }
+  }
+
+  // 如果有排序结果，则替换为算法给出的排序
+  if (customOrder.size() > 0) {
+    for (auto& netIdx : customOrder) {
+      customOrderRoutes.push_back({outerNetMap_[netIdx], 0, true});
+    }
+
+    routes = customOrderRoutes;
+  }
+
+  // 依次将 route 和 check 中的元素压入队列
   route_queue_update_queue(checks, routes, rerouteQueue);
 }
 

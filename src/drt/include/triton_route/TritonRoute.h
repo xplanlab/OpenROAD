@@ -137,11 +137,11 @@ class TritonRoute
   void setBreakIter(int breakIter);
   void setParallelWorkers(int parallelWorkers);
   void setSkipReroute(bool on = true);
-  void setRerouteNetsSortMode(int sortMode);
+  void setRerouteNetsSortMode(int mode);
   void setApiHost(const std::string& apiHost);
   void setApiTimeout(int timeout);
   void setNetOrderingTraining(bool on = true);
-  void setNetOrderingEvaluation(bool on = true);
+  void setNetOrderingEvaluation(int mode);
   void setDebugPaMarkers(bool on = true);
   void setDebugWorkerParams(int mazeEndIter,
                             int drcCost,

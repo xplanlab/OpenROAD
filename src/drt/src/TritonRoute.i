@@ -174,7 +174,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              const char* api_host,
                              int api_timeout,
                              bool net_ordering_training,
-                             bool net_ordering_evaluation)
+                             int net_ordering_evaluation)
 {
   auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
   router->setDebugNetName(net_name);
