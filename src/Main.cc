@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
     }
 
     if (!findCmdLineFlag(cmd_argc, cmd_argv, "-no_init")) {
-      logger->warn(utl::ORD, 39, ".openroad ignored with -python");
+      // logger->warn(utl::ORD, 39, ".openroad ignored with -python");
     }
 
     const char* threads = findCmdLineKey(cmd_argc, cmd_argv, "-threads");
