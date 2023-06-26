@@ -316,9 +316,13 @@ proc detailed_route_debug { args } {
 
   if { [info exists keys(-api_host)] } {
     set api_host $keys(-api_host)
-    set api_timeout $keys(-api_timeout)
   } else {
     set api_host ""
+  }
+
+  if { [info exists keys(-api_timeout)] } {
+    set api_timeout $keys(-api_timeout)
+  } else {
     set api_timeout 0
   }
 
