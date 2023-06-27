@@ -134,7 +134,6 @@ class TritonRoute
   void setCustomStrategies(bool on = true);
   void setCustomSize(int customSize);
   void setCustomOffset(int customOffset);
-  void setBreakIter(int breakIter);
   void setParallelWorkers(int parallelWorkers);
   void setSkipReroute(bool on = true);
   void setRerouteNetsSortMode(int mode);

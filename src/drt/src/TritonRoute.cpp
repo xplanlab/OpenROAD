@@ -171,11 +171,6 @@ void TritonRoute::setCustomOffset(int customOffset)
   debug_->customOffset = customOffset;
 }
 
-void TritonRoute::setBreakIter(int breakIter)
-{
-  debug_->breakIter = breakIter;
-}
-
 void TritonRoute::setParallelWorkers(int parallelWorkers)
 {
   debug_->parallelWorkers = parallelWorkers;

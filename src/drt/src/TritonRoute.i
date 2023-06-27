@@ -162,7 +162,6 @@ set_detailed_route_debug_cmd(const char* net_name,
                              bool custom_strategies,
                              int custom_size,
                              int custom_offset,
-                             int break_iter,
                              int parallel_workers,
                              bool pa_markers,
                              bool pa_edge,
@@ -190,7 +189,6 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setCustomStrategies(custom_strategies);
   router->setCustomSize(custom_size);
   router->setCustomOffset(custom_offset);
-  router->setBreakIter(break_iter);
   router->setParallelWorkers(parallel_workers);
   router->setDebugPaMarkers(pa_markers);
   router->setDebugPaEdge(pa_edge);
