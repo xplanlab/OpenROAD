@@ -176,6 +176,11 @@ void TritonRoute::setParallelWorkers(int parallelWorkers)
   debug_->parallelWorkers = parallelWorkers;
 }
 
+void TritonRoute::setDrRandomInitOrder(bool on)
+{
+  debug_->drRandomInitOrder = on;
+}
+
 void TritonRoute::setSkipReroute(bool on)
 {
   debug_->skipReroute = on;

@@ -168,6 +168,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              bool pa_commit,
                              const char* dumpDir,
                              bool ta,
+                             bool dr_random_init_order,
                              bool skip_reroute,
                              int reroute_nets_sort_mode,
                              const char* api_host,
@@ -194,6 +195,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setDebugPaEdge(pa_edge);
   router->setDebugPaCommit(pa_commit);
   router->setDebugTA(ta);
+  router->setDrRandomInitOrder(dr_random_init_order);
   router->setSkipReroute(skip_reroute);
   router->setRerouteNetsSortMode(reroute_nets_sort_mode);
   router->setApiHost(api_host);

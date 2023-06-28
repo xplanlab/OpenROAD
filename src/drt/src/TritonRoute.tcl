@@ -226,7 +226,8 @@ proc detailed_route_debug { args } {
             -parallel_workers -reroute_nets_sort_mode \
             -api_host -api_timeout -net_ordering_evaluation} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
-             -custom_strategies -skip_reroute -net_ordering_training}
+             -dr_random_init_order -skip_reroute -custom_strategies\
+             -net_ordering_training}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
@@ -238,9 +239,10 @@ proc detailed_route_debug { args } {
   set pa_edge [info exists flags(-pa_edge)]
   set pa_commit [info exists flags(-pa_commit)]
   set ta [info exists flags(-ta)]
-  set custom_strategies [info exists flags(-custom_strategies)]
+  set dr_random_init_order [info exists flags(-dr_random_init_order)]
   set skip_reroute [info exists flags(-skip_reroute)]
   set skip_sort_reroute_nets [info exists flags(-skip_sort_reroute_nets)]
+  set custom_strategies [info exists flags(-custom_strategies)]
   set net_ordering_training [info exists flags(-net_ordering_training)]
 
   if { [info exists keys(-net)] } {
@@ -322,8 +324,8 @@ proc detailed_route_debug { args } {
   drt::set_detailed_route_debug_cmd $net_name $pin_name $dr $dump_dr $pa $maze \
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
       $parallel_workers $pa_markers $pa_edge $pa_commit $dump_dir \
-      $ta $skip_reroute $reroute_nets_sort_mode $api_host $api_timeout \
-      $net_ordering_training $net_ordering_evaluation
+      $ta $dr_random_init_order $skip_reroute $reroute_nets_sort_mode \
+      $api_host $api_timeout $net_ordering_training $net_ordering_evaluation
 }
 
 sta::define_cmd_args "pin_access" {

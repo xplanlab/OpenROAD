@@ -27,6 +27,7 @@
  */
 
 #include <algorithm>
+#include <random>
 
 #include "dr/FlexDR.h"
 #include "frRTree.h"
@@ -2631,6 +2632,13 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
     }
 
     routes = customOrderRoutes;
+  }
+
+  if (debugSettings_->drRandomInitOrder) {
+    // 打乱 routes 元素顺序
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(routes.begin(), routes.end(), g);
   }
 
   // 依次将 route 和 check 中的元素压入队列
