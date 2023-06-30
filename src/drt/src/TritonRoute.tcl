@@ -224,7 +224,7 @@ proc detailed_route_debug { args } {
   sta::parse_key_args "detailed_route_debug" args \
       keys {-net -worker -iter -pin -dump_dir -custom_size -custom_offset \
             -parallel_workers -reroute_nets_sort_mode \
-            -api_host -api_timeout -net_ordering_evaluation} \
+            -api_addr -api_timeout -net_ordering_evaluation} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
              -dr_random_init_order -skip_reroute -custom_strategies\
              -net_ordering_training}
@@ -309,10 +309,10 @@ proc detailed_route_debug { args } {
     set reroute_nets_sort_mode 0
   }
 
-  if { [info exists keys(-api_host)] } {
-    set api_host $keys(-api_host)
+  if { [info exists keys(-api_addr)] } {
+    set api_addr $keys(-api_addr)
   } else {
-    set api_host ""
+    set api_addr ""
   }
 
   if { [info exists keys(-api_timeout)] } {
@@ -325,7 +325,7 @@ proc detailed_route_debug { args } {
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
       $parallel_workers $pa_markers $pa_edge $pa_commit $dump_dir \
       $ta $dr_random_init_order $skip_reroute $reroute_nets_sort_mode \
-      $api_host $api_timeout $net_ordering_training $net_ordering_evaluation
+      $api_addr $api_timeout $net_ordering_training $net_ordering_evaluation
 }
 
 sta::define_cmd_args "pin_access" {

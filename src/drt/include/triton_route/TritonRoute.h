@@ -138,7 +138,7 @@ class TritonRoute
   void setDrRandomInitOrder(bool on = true);
   void setSkipReroute(bool on = true);
   void setRerouteNetsSortMode(int mode);
-  void setApiHost(const std::string& apiHost);
+  void setApiAddr(const std::string& apiAddr);
   void setApiTimeout(int timeout);
   void setNetOrderingTraining(bool on = true);
   void setNetOrderingEvaluation(int mode);

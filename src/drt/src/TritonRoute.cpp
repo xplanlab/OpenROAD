@@ -191,9 +191,9 @@ void TritonRoute::setRerouteNetsSortMode(int sortMode)
   debug_->rerouteNetsSortMode = sortMode;
 }
 
-void TritonRoute::setApiHost(const std::string& apiHost)
+void TritonRoute::setApiAddr(const std::string& apiAddr)
 {
-  debug_->apiHost = apiHost;
+  debug_->apiAddr = apiAddr;
 }
 
 void TritonRoute::setApiTimeout(int timeout)

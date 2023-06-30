@@ -353,7 +353,7 @@ struct frDebugSettings
   bool drRandomInitOrder;
   bool skipReroute;
   int rerouteNetsSortMode;
-  std::string apiHost;
+  std::string apiAddr;
   int apiTimeout;
   bool netOrderingTraining;
   int netOrderingEvaluation;

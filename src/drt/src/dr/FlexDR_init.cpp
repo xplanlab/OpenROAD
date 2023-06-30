@@ -2564,9 +2564,9 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
   vector<RouteQueueEntry> customOrderRoutes;  // 记录即将替换掉初始排序的临时序列
 
   // 当推断模式为「替换初始排序」时，使用算法排序好的序列
-  if (debugSettings_->apiHost != ""
+  if (debugSettings_->apiAddr != ""
       && debugSettings_->netOrderingEvaluation == 2) {
-    std::string addr = "tcp://" + debugSettings_->apiHost;
+    std::string addr = "tcp://" + debugSettings_->apiAddr;
     utl::MQ mq(addr, debugSettings_->apiTimeout);
 
     // 先将不需要布线的网络放到队列

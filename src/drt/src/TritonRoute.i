@@ -171,7 +171,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              bool dr_random_init_order,
                              bool skip_reroute,
                              int reroute_nets_sort_mode,
-                             const char* api_host,
+                             const char* api_addr,
                              int api_timeout,
                              bool net_ordering_training,
                              int net_ordering_evaluation)
@@ -198,7 +198,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setDrRandomInitOrder(dr_random_init_order);
   router->setSkipReroute(skip_reroute);
   router->setRerouteNetsSortMode(reroute_nets_sort_mode);
-  router->setApiHost(api_host);
+  router->setApiAddr(api_addr);
   router->setApiTimeout(api_timeout);
   router->setNetOrderingTraining(net_ordering_training);
   router->setNetOrderingEvaluation(net_ordering_evaluation);

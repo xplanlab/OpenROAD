@@ -1798,10 +1798,10 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
   auto& workerRegionQuery = getWorkerRegionQuery();
 
   // 训练模式，或者单步的推断模式
-  if (debugSettings_->apiHost != ""
+  if (debugSettings_->apiAddr != ""
       && (debugSettings_->netOrderingTraining
           || debugSettings_->netOrderingEvaluation == 1)) {
-    std::string addr = "tcp://" + debugSettings_->apiHost;
+    std::string addr = "tcp://" + debugSettings_->apiAddr;
     utl::MQ mq(addr, debugSettings_->apiTimeout);
 
     // 待布网络下标
