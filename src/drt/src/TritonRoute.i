@@ -41,6 +41,7 @@
 #include "utl/Logger.h"
 %}
 
+%include <std_string.i>
 %include "../../Exception.i"
 
 %inline %{
@@ -67,6 +68,12 @@ unsigned long detailed_route_single_worker_num_vias()
 {
   auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
   return router->getSingleWorkerViaCount();
+}
+
+std::string detailed_route_num_rar()
+{
+  auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
+  return router->getRoutedAndReroutedCount();
 }
 
 void detailed_route_distributed(const char* remote_ip,
@@ -187,6 +194,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              const char* dumpDir,
                              bool ta,
                              bool dr_random_init_order,
+                             bool count_routed_and_rerouted,
                              bool skip_reroute,
                              int reroute_nets_sort_mode,
                              const char* api_addr,
@@ -215,6 +223,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setDebugPaCommit(pa_commit);
   router->setDebugTA(ta);
   router->setDrRandomInitOrder(dr_random_init_order);
+  router->setCountRoutedAndRerouted(count_routed_and_rerouted);
   router->setSkipReroute(skip_reroute);
   router->setRerouteNetsSortMode(reroute_nets_sort_mode);
   router->setApiAddr(api_addr);

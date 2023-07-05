@@ -313,6 +313,7 @@ struct frDebugSettings
         customOffset(0),
         parallelWorkers(0),
         drRandomInitOrder(false),
+        countRoutedAndRerouted(false),
         skipReroute(false),
         rerouteNetsSortMode(0),
         apiTimeout(30000),
@@ -352,6 +353,7 @@ struct frDebugSettings
   int customOffset;
   int parallelWorkers;
   bool drRandomInitOrder;
+  bool countRoutedAndRerouted;
   bool skipReroute;
   int rerouteNetsSortMode;
   std::string apiAddr;

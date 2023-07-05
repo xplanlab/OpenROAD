@@ -219,6 +219,11 @@ proc detailed_route_single_worker_num_vias { args } {
     return [drt::detailed_route_single_worker_num_vias]
 }
 
+proc detailed_route_num_rar { args } {
+    sta::check_argc_eq0 "detailed_route_num_rar" $args
+    return [drt::detailed_route_num_rar]
+}
+
 sta::define_cmd_args "detailed_route_debug" {
     [-pa]
     [-ta]
@@ -242,8 +247,8 @@ proc detailed_route_debug { args } {
             -api_addr -api_timeout -net_ordering_training \
             -net_ordering_evaluation} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
-             -dr_random_init_order -skip_reroute -custom_strategies \
-             -single_worker_statistics}
+             -dr_random_init_order -count_routed_and_rerouted \
+             -skip_reroute -custom_strategies -single_worker_statistics}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
@@ -256,6 +261,7 @@ proc detailed_route_debug { args } {
   set pa_commit [info exists flags(-pa_commit)]
   set ta [info exists flags(-ta)]
   set dr_random_init_order [info exists flags(-dr_random_init_order)]
+  set count_routed_and_rerouted [info exists flags(-count_routed_and_rerouted)]
   set skip_reroute [info exists flags(-skip_reroute)]
   set skip_sort_reroute_nets [info exists flags(-skip_sort_reroute_nets)]
   set custom_strategies [info exists flags(-custom_strategies)]
@@ -340,15 +346,15 @@ proc detailed_route_debug { args } {
   if { [info exists keys(-api_timeout)] } {
     set api_timeout $keys(-api_timeout)
   } else {
-    set api_timeout 0
+    set api_timeout 30000
   }
 
   drt::set_detailed_route_debug_cmd $net_name $pin_name $dr $dump_dr $pa $maze \
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
       $parallel_workers $pa_markers $pa_edge $pa_commit $dump_dir \
-      $ta $dr_random_init_order $skip_reroute $reroute_nets_sort_mode \
-      $api_addr $api_timeout $net_ordering_training $net_ordering_evaluation \
-      $single_worker_statistics
+      $ta $dr_random_init_order $count_routed_and_rerouted $skip_reroute \
+      $reroute_nets_sort_mode $api_addr $api_timeout $net_ordering_training \
+      $net_ordering_evaluation $single_worker_statistics
 }
 
 sta::define_cmd_args "pin_access" {

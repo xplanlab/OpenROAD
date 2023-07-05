@@ -2062,6 +2062,21 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
         }
       }
     }
+
+    // 统计 routed / rerouted 次数
+    if (debugSettings_->countRoutedAndRerouted) {
+      // 初始化计数表，从 outerNet 提取待布线网络
+      map<unsigned int, unsigned int> countMap;
+      std::string countMapJson = "{";
+      for (const auto& [outerIndex, net] : getOuterNetMap()) {
+        countMap[outerIndex] = net->getNumReroutes();
+        countMapJson += "\"" + std::to_string(outerIndex) + "\":" + std::to_string(net->getNumReroutes()) + ",";
+      }
+      countMapJson.pop_back();
+      countMapJson += "}";
+      auto* router = ord::getTritonRouteInstance();
+      router->setRoutedAndReroutedCount(countMapJson);
+    }
   }
 
   if (debugSettings_->singleWorkerStatistics) {

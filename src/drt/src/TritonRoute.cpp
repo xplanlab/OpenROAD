@@ -181,6 +181,11 @@ void TritonRoute::setDrRandomInitOrder(bool on)
   debug_->drRandomInitOrder = on;
 }
 
+void TritonRoute::setCountRoutedAndRerouted(bool on)
+{
+  debug_->countRoutedAndRerouted = on;
+}
+
 void TritonRoute::setSkipReroute(bool on)
 {
   debug_->skipReroute = on;
@@ -271,6 +276,11 @@ unsigned long TritonRoute::getSingleWorkerViaCount() const
   return single_worker_via_count_;
 }
 
+std::string TritonRoute::getRoutedAndReroutedCount() const
+{
+  return routed_and_rerouted_count_;
+}
+
 void TritonRoute::setSingleWorkerViolationCount(unsigned long ViolationCount)
 {
   single_worker_violation_count_ = ViolationCount;
@@ -284,6 +294,11 @@ void TritonRoute::setSingleWorkerWireLength(unsigned long wireLength)
 void TritonRoute::setSingleWorkerViaCount(unsigned long viaCount)
 {
   single_worker_via_count_ = viaCount;
+}
+
+void TritonRoute::setRoutedAndReroutedCount(std::string json)
+{
+  routed_and_rerouted_count_ = json;
 }
 
 std::string TritonRoute::runDRWorker(const std::string& workerStr,
