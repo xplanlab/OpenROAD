@@ -201,14 +201,19 @@ void TritonRoute::setApiTimeout(int timeout)
   debug_->apiTimeout = timeout;
 }
 
-void TritonRoute::setNetOrderingTraining(bool on)
+void TritonRoute::setNetOrderingTraining(int mode)
 {
-  debug_->netOrderingTraining = on;
+  debug_->netOrderingTraining = mode;
 }
 
 void TritonRoute::setNetOrderingEvaluation(int mode)
 {
   debug_->netOrderingEvaluation = mode;
+}
+
+void TritonRoute::setSingleWorkerStatistics(bool on)
+{
+  debug_->singleWorkerStatistics = on;
 }
 
 void TritonRoute::setDebugPaMarkers(bool on)
@@ -249,6 +254,36 @@ int TritonRoute::getNumDRVs() const
     logger_->error(DRT, 2, "Detailed routing has not been run yet.");
   }
   return num_drvs_;
+}
+
+unsigned long TritonRoute::getSingleWorkerViolationCount() const
+{
+  return single_worker_violation_count_;
+}
+
+unsigned long TritonRoute::getSingleWorkerWireLength() const
+{
+  return single_worker_wire_length_;
+}
+
+unsigned long TritonRoute::getSingleWorkerViaCount() const
+{
+  return single_worker_via_count_;
+}
+
+void TritonRoute::setSingleWorkerViolationCount(unsigned long ViolationCount)
+{
+  single_worker_violation_count_ = ViolationCount;
+}
+
+void TritonRoute::setSingleWorkerWireLength(unsigned long wireLength)
+{
+  single_worker_wire_length_ = wireLength;
+}
+
+void TritonRoute::setSingleWorkerViaCount(unsigned long viaCount)
+{
+  single_worker_via_count_ = viaCount;
 }
 
 std::string TritonRoute::runDRWorker(const std::string& workerStr,

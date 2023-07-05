@@ -45,6 +45,8 @@ class OpenRoad;
 
 triton_route::TritonRoute* makeTritonRoute();
 
+triton_route::TritonRoute* getTritonRouteInstance();
+
 void deleteTritonRoute(triton_route::TritonRoute* router);
 
 void initTritonRoute(OpenRoad* openroad);

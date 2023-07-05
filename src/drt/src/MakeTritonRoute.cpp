@@ -43,6 +43,11 @@ triton_route::TritonRoute* makeTritonRoute()
   return new triton_route::TritonRoute();
 }
 
+triton_route::TritonRoute* getTritonRouteInstance()
+{
+  return OpenRoad::openRoad()->getTritonRoute();
+}
+
 void deleteTritonRoute(triton_route::TritonRoute* router)
 {
   delete router;

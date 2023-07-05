@@ -51,6 +51,24 @@ int detailed_route_num_drvs()
   return router->getNumDRVs();
 }
 
+unsigned long detailed_route_single_worker_num_drvs()
+{
+  auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
+  return router->getSingleWorkerViolationCount();
+}
+
+unsigned long detailed_route_single_worker_len_wire()
+{
+  auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
+  return router->getSingleWorkerWireLength();
+}
+
+unsigned long detailed_route_single_worker_num_vias()
+{
+  auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
+  return router->getSingleWorkerViaCount();
+}
+
 void detailed_route_distributed(const char* remote_ip,
                                 unsigned short remote_port,
                                 const char* sharedVolume,
@@ -173,8 +191,9 @@ set_detailed_route_debug_cmd(const char* net_name,
                              int reroute_nets_sort_mode,
                              const char* api_addr,
                              int api_timeout,
-                             bool net_ordering_training,
-                             int net_ordering_evaluation)
+                             int net_ordering_training,
+                             int net_ordering_evaluation,
+                             bool single_worker_statistics)
 {
   auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
   router->setDebugNetName(net_name);
@@ -202,6 +221,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setApiTimeout(api_timeout);
   router->setNetOrderingTraining(net_ordering_training);
   router->setNetOrderingEvaluation(net_ordering_evaluation);
+  router->setSingleWorkerStatistics(single_worker_statistics);
 }
 
 void

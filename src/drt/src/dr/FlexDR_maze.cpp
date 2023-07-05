@@ -37,6 +37,7 @@
 #include "dr/FlexDR.h"
 #include "dr/FlexDR_graphics.h"
 #include "gc/FlexGC.h"
+#include "triton_route/MakeTritonRoute.h"
 #include "utl/MyLogger.h"
 
 using namespace std;
@@ -1797,9 +1798,9 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
 
-  // 训练模式，或者单步的推断模式
+  // 单步的训练模式或推断模式
   if (debugSettings_->apiAddr != ""
-      && (debugSettings_->netOrderingTraining
+      && (debugSettings_->netOrderingTraining == 1
           || debugSettings_->netOrderingEvaluation == 1)) {
     std::string addr = "tcp://" + debugSettings_->apiAddr;
     utl::MQ mq(addr, debugSettings_->apiTimeout);
@@ -2061,6 +2062,44 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
         }
       }
     }
+  }
+
+  if (debugSettings_->singleWorkerStatistics) {
+    unsigned long violation = 0;
+    unsigned long wireLength = 0;
+    unsigned long via = 0;
+
+    // 记录违例数量
+    auto gcWorker = getGCWorker();
+    gcWorker->resetTargetNet();
+    gcWorker->setEnableSurgicalFix(true);
+    gcWorker->main();
+    gcWorker->end();
+    for (auto& uMarker : gcWorker_->getMarkers()) {
+      auto& marker = *uMarker;
+      if (getDrcBox().intersects(marker.getBBox())) {
+        violation++;
+      }
+    }
+
+    for (auto& net : getNets()) {
+      for (auto& connFig : net->getRouteConnFigs()) {if (connFig->typeId() == drcPathSeg) {
+          // 记录线长
+          auto pathSeg = static_cast<drPathSeg*>(connFig.get());
+          auto [bp, ep] = pathSeg->getPoints();
+          frCoord pathSegLen = Point::manhattanDistance(ep, bp);
+          wireLength += pathSegLen;
+        } else if (connFig->typeId() == drcVia) {
+          // 记录过孔数量
+          via++;
+        }
+      }
+    }
+
+    auto* router = ord::getTritonRouteInstance();
+    router->setSingleWorkerViolationCount(violation);
+    router->setSingleWorkerWireLength(wireLength);
+    router->setSingleWorkerViaCount(via);
   }
 }
 

@@ -122,6 +122,13 @@ class TritonRoute
 
   int getNumDRVs() const;
 
+  unsigned long getSingleWorkerViolationCount() const;
+  unsigned long getSingleWorkerWireLength() const;
+  unsigned long getSingleWorkerViaCount() const;
+  void setSingleWorkerViolationCount(unsigned long ViolationCount);
+  void setSingleWorkerWireLength(unsigned long wireLength);
+  void setSingleWorkerViaCount(unsigned long viaCount);
+
   void setDebugDR(bool on = true);
   void setDebugDumpDR(bool on, const std::string& dumpDir);
   void setDebugMaze(bool on = true);
@@ -140,8 +147,9 @@ class TritonRoute
   void setRerouteNetsSortMode(int mode);
   void setApiAddr(const std::string& apiAddr);
   void setApiTimeout(int timeout);
-  void setNetOrderingTraining(bool on = true);
+  void setNetOrderingTraining(int mode);
   void setNetOrderingEvaluation(int mode);
+  void setSingleWorkerStatistics(bool on = true);
   void setDebugPaMarkers(bool on = true);
   void setDebugWorkerParams(int mazeEndIter,
                             int drcCost,
@@ -197,6 +205,9 @@ class TritonRoute
   std::unique_ptr<fr::FlexDR> dr_;  // kept for single stepping
   stt::SteinerTreeBuilder* stt_builder_;
   int num_drvs_;
+  unsigned long single_worker_violation_count_;
+  unsigned long single_worker_wire_length_;
+  unsigned long single_worker_via_count_;
   gui::Gui* gui_;
   dst::Distributed* dist_;
   bool distributed_;

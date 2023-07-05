@@ -204,6 +204,21 @@ proc detailed_route_num_drvs { args } {
   return [drt::detailed_route_num_drvs]
 }
 
+proc detailed_route_single_worker_num_drvs { args } {
+    sta::check_argc_eq0 "detailed_route_single_worker_num_drvs" $args
+    return [drt::detailed_route_single_worker_num_drvs]
+}
+
+proc detailed_route_single_worker_len_wire { args } {
+    sta::check_argc_eq0 "detailed_route_single_worker_len_wire" $args
+    return [drt::detailed_route_single_worker_len_wire]
+}
+
+proc detailed_route_single_worker_num_vias { args } {
+    sta::check_argc_eq0 "detailed_route_single_worker_num_vias" $args
+    return [drt::detailed_route_single_worker_num_vias]
+}
+
 sta::define_cmd_args "detailed_route_debug" {
     [-pa]
     [-ta]
@@ -224,10 +239,11 @@ proc detailed_route_debug { args } {
   sta::parse_key_args "detailed_route_debug" args \
       keys {-net -worker -iter -pin -dump_dir -custom_size -custom_offset \
             -parallel_workers -reroute_nets_sort_mode \
-            -api_addr -api_timeout -net_ordering_evaluation} \
+            -api_addr -api_timeout -net_ordering_training \
+            -net_ordering_evaluation} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
-             -dr_random_init_order -skip_reroute -custom_strategies\
-             -net_ordering_training}
+             -dr_random_init_order -skip_reroute -custom_strategies \
+             -single_worker_statistics}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
@@ -243,7 +259,7 @@ proc detailed_route_debug { args } {
   set skip_reroute [info exists flags(-skip_reroute)]
   set skip_sort_reroute_nets [info exists flags(-skip_sort_reroute_nets)]
   set custom_strategies [info exists flags(-custom_strategies)]
-  set net_ordering_training [info exists flags(-net_ordering_training)]
+  set single_worker_statistics [info exists flags(-single_worker_statistics)]
 
   if { [info exists keys(-net)] } {
     set net_name $keys(-net)
@@ -297,6 +313,12 @@ proc detailed_route_debug { args } {
     set parallel_workers 0
   }
 
+  if { [info exists keys(-net_ordering_training)] } {
+    set net_ordering_training $keys(-net_ordering_training)
+  } else {
+    set net_ordering_training 0
+  }
+
   if { [info exists keys(-net_ordering_evaluation)] } {
     set net_ordering_evaluation $keys(-net_ordering_evaluation)
   } else {
@@ -325,7 +347,8 @@ proc detailed_route_debug { args } {
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
       $parallel_workers $pa_markers $pa_edge $pa_commit $dump_dir \
       $ta $dr_random_init_order $skip_reroute $reroute_nets_sort_mode \
-      $api_addr $api_timeout $net_ordering_training $net_ordering_evaluation
+      $api_addr $api_timeout $net_ordering_training $net_ordering_evaluation \
+      $single_worker_statistics
 }
 
 sta::define_cmd_args "pin_access" {

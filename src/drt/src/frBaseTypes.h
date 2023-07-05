@@ -316,8 +316,9 @@ struct frDebugSettings
         skipReroute(false),
         rerouteNetsSortMode(0),
         apiTimeout(30000),
-        netOrderingTraining(false),
+        netOrderingTraining(0),
         netOrderingEvaluation(0),
+        singleWorkerStatistics(false),
         paMarkers(false),
         paEdge(false),
         paCommit(false),
@@ -355,8 +356,9 @@ struct frDebugSettings
   int rerouteNetsSortMode;
   std::string apiAddr;
   int apiTimeout;
-  bool netOrderingTraining;
+  int netOrderingTraining;
   int netOrderingEvaluation;
+  bool singleWorkerStatistics;
   bool paMarkers;
   bool paEdge;
   bool paCommit;
