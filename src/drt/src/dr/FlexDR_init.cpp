@@ -2628,6 +2628,7 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
 
   // 如果有排序结果，则替换为算法给出的排序
   if (customOrder.size() > 0) {
+    logger_->info(DRT, 990, "Applying initial net order...");
     for (auto& netIdx : customOrder) {
       customOrderRoutes.push_back({outerNetMap_[netIdx], 0, true});
     }
