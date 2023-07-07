@@ -224,6 +224,11 @@ proc detailed_route_num_rar { args } {
     return [drt::detailed_route_num_rar]
 }
 
+proc detailed_route_metrics_delta { args } {
+    sta::check_argc_eq0 "detailed_route_metrics_delta" $args
+    return [drt::detailed_route_metrics_delta]
+}
+
 sta::define_cmd_args "detailed_route_debug" {
     [-pa]
     [-ta]
@@ -248,7 +253,8 @@ proc detailed_route_debug { args } {
             -net_ordering_evaluation} \
       flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
              -dr_random_init_order -count_routed_and_rerouted \
-             -skip_reroute -custom_strategies -single_worker_statistics}
+             -count_metrics_delta -skip_reroute -custom_strategies \
+             -single_worker_statistics}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
@@ -262,6 +268,7 @@ proc detailed_route_debug { args } {
   set ta [info exists flags(-ta)]
   set dr_random_init_order [info exists flags(-dr_random_init_order)]
   set count_routed_and_rerouted [info exists flags(-count_routed_and_rerouted)]
+  set count_metrics_delta [info exists flags(-count_metrics_delta)]
   set skip_reroute [info exists flags(-skip_reroute)]
   set skip_sort_reroute_nets [info exists flags(-skip_sort_reroute_nets)]
   set custom_strategies [info exists flags(-custom_strategies)]
@@ -352,7 +359,8 @@ proc detailed_route_debug { args } {
   drt::set_detailed_route_debug_cmd $net_name $pin_name $dr $dump_dr $pa $maze \
       $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
       $parallel_workers $pa_markers $pa_edge $pa_commit $dump_dir \
-      $ta $dr_random_init_order $count_routed_and_rerouted $skip_reroute \
+      $ta $dr_random_init_order $count_routed_and_rerouted \
+      $count_metrics_delta $skip_reroute \
       $reroute_nets_sort_mode $api_addr $api_timeout $net_ordering_training \
       $net_ordering_evaluation $single_worker_statistics
 }

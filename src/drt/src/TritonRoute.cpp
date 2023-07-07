@@ -186,6 +186,12 @@ void TritonRoute::setCountRoutedAndRerouted(bool on)
   debug_->countRoutedAndRerouted = on;
 }
 
+void TritonRoute::setCountMetricsDelta(bool on)
+{
+  debug_->countMetricsDelta = on;
+}
+
+
 void TritonRoute::setSkipReroute(bool on)
 {
   debug_->skipReroute = on;
@@ -281,6 +287,11 @@ std::string TritonRoute::getRoutedAndReroutedCount() const
   return routed_and_rerouted_count_;
 }
 
+std::string TritonRoute::getMetricsDelta() const
+{
+  return metrics_delta_;
+}
+
 void TritonRoute::setSingleWorkerViolationCount(unsigned long ViolationCount)
 {
   single_worker_violation_count_ = ViolationCount;
@@ -299,6 +310,11 @@ void TritonRoute::setSingleWorkerViaCount(unsigned long viaCount)
 void TritonRoute::setRoutedAndReroutedCount(std::string json)
 {
   routed_and_rerouted_count_ = json;
+}
+
+void TritonRoute::setMetricsDelta(std::string json)
+{
+  metrics_delta_ = json;
 }
 
 std::string TritonRoute::runDRWorker(const std::string& workerStr,

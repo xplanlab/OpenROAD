@@ -611,15 +611,15 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
   }
 
   // 统计 violation
-  auto gcWorker_ = drWorker_->getGCWorker();
+  auto gcWorker = drWorker_->getGCWorker();
 
-  gcWorker_->resetTargetNet();
-  gcWorker_->setEnableSurgicalFix(true);
-  gcWorker_->main();
-  gcWorker_->end();
+  gcWorker->resetTargetNet();
+  gcWorker->setEnableSurgicalFix(true);
+  gcWorker->main();
+  gcWorker->end();
 
   int numMarkers = 0;
-  for (auto& uMarker : gcWorker_->getMarkers()) {
+  for (auto& uMarker : gcWorker->getMarkers()) {
     auto& marker = *uMarker;
     if (drWorker_->getDrcBox().intersects(marker.getBBox())) {
       numMarkers++;

@@ -76,6 +76,12 @@ std::string detailed_route_num_rar()
   return router->getRoutedAndReroutedCount();
 }
 
+std::string detailed_route_metrics_delta()
+{
+  auto* router = ord::OpenRoad::openRoad()->getTritonRoute();
+  return router->getMetricsDelta();
+}
+
 void detailed_route_distributed(const char* remote_ip,
                                 unsigned short remote_port,
                                 const char* sharedVolume,
@@ -195,6 +201,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              bool ta,
                              bool dr_random_init_order,
                              bool count_routed_and_rerouted,
+                             bool count_metrics_delta,
                              bool skip_reroute,
                              int reroute_nets_sort_mode,
                              const char* api_addr,
@@ -224,6 +231,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setDebugTA(ta);
   router->setDrRandomInitOrder(dr_random_init_order);
   router->setCountRoutedAndRerouted(count_routed_and_rerouted);
+  router->setCountMetricsDelta(count_metrics_delta);
   router->setSkipReroute(skip_reroute);
   router->setRerouteNetsSortMode(reroute_nets_sort_mode);
   router->setApiAddr(api_addr);

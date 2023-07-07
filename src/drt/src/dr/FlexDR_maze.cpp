@@ -1900,12 +1900,32 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     }
 
     // 如果是在训练模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
-    if (debugSettings_->netOrderingTraining) {
+    if (debugSettings_->netOrderingTraining == 1) {
       queryNetOrder(mq, outerNetIdxRemaining);
     }
   } else {
     int initNetCnt = rerouteQueue.size();
     int finishedNetCnt = 0;
+    int finishedNetCntForMetricsDelta = 0;
+
+    // 用于记录指标增量
+    map<unsigned int, vector<unsigned long>> metricsDeltaMap;
+    map<drNet*, unsigned int> getOuterNetMapReverse;
+    for (const auto& [outerIndex, net] : getOuterNetMap()) {
+      metricsDeltaMap[outerIndex] = {0, 0, 0};
+      getOuterNetMapReverse[net] = outerIndex;
+    }
+    int lastViolationCount = 0;
+    gcWorker_->resetTargetNet();
+    gcWorker_->setEnableSurgicalFix(true);
+    gcWorker_->main();
+    gcWorker_->end();
+    for (auto& uMarker : gcWorker_->getMarkers()) {
+      auto& marker = *uMarker;
+      if (getDrcBox().intersects(marker.getBBox())) {
+        lastViolationCount++;
+      }
+    }
 
     while (true) {
       if (debugSettings_->skipReroute) {
@@ -2061,6 +2081,71 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
           graphics_->endNet(net);
         }
       }
+
+      if (debugSettings_->countMetricsDelta) {
+        finishedNetCntForMetricsDelta++;
+
+        // 每完成一个网络的布线（不包含拆线重布）就记录指标增量
+        if (finishedNetCntForMetricsDelta <= initNetCnt) {
+          auto net = static_cast<drNet*>(obj);
+          unsigned int outerNetIdx = getOuterNetMapReverse[net];
+
+          unsigned long violation = 0;
+          unsigned long wireLength = 0;
+          unsigned long via = 0;
+
+          // 记录违例数量
+          gcWorker_->resetTargetNet();
+          gcWorker_->setEnableSurgicalFix(true);
+          gcWorker_->main();
+          gcWorker_->end();
+          for (auto& uMarker : gcWorker_->getMarkers()) {
+            auto& marker = *uMarker;
+            if (getDrcBox().intersects(marker.getBBox())) {
+              violation++;
+            }
+          }
+
+          // 记录网络的线长和过孔数量
+          for (auto& connFig : net->getRouteConnFigs()) {
+            if (connFig->typeId() == drcPathSeg) {
+              // 记录线长
+              auto pathSeg = static_cast<drPathSeg*>(connFig.get());
+              auto [bp, ep] = pathSeg->getPoints();
+              frCoord pathSegLen = Point::manhattanDistance(ep, bp);
+              wireLength += pathSegLen;
+            } else if (connFig->typeId() == drcVia) {
+              // 记录过孔数量
+              via++;
+            }
+          }
+
+          metricsDeltaMap[outerNetIdx][0] = violation - lastViolationCount;
+          metricsDeltaMap[outerNetIdx][1] = wireLength;
+          metricsDeltaMap[outerNetIdx][2] = via;
+
+          lastViolationCount = violation;
+
+//          std::cout<<metricsDeltaMap[outerNetIdx][0]<<" "<<metricsDeltaMap[outerNetIdx][1]<<" "<<metricsDeltaMap[outerNetIdx][2]<<std::endl;
+        }
+      }
+    }
+
+    // reroute queue 排空后整理指标增量准备输出
+    if (debugSettings_->countMetricsDelta) {
+      std::string countMetricsDeltaJson = "{";
+      for (auto& [outerNetIdx, metricsDelta] : metricsDeltaMap) {
+        countMetricsDeltaJson += "\"" + std::to_string(outerNetIdx) + "\":[";
+        for (auto value : metricsDelta) {
+          countMetricsDeltaJson += std::to_string(value) + ",";
+        }
+        countMetricsDeltaJson.pop_back();
+        countMetricsDeltaJson += "],";
+      }
+      countMetricsDeltaJson.pop_back();
+      countMetricsDeltaJson += "}";
+      auto* router = ord::getTritonRouteInstance();
+      router->setMetricsDelta(countMetricsDeltaJson);
     }
 
     // 统计 routed / rerouted 次数
@@ -2079,17 +2164,17 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     }
   }
 
+  // 单 worker 指标统计
   if (debugSettings_->singleWorkerStatistics) {
     unsigned long violation = 0;
     unsigned long wireLength = 0;
     unsigned long via = 0;
 
     // 记录违例数量
-    auto gcWorker = getGCWorker();
-    gcWorker->resetTargetNet();
-    gcWorker->setEnableSurgicalFix(true);
-    gcWorker->main();
-    gcWorker->end();
+    gcWorker_->resetTargetNet();
+    gcWorker_->setEnableSurgicalFix(true);
+    gcWorker_->main();
+    gcWorker_->end();
     for (auto& uMarker : gcWorker_->getMarkers()) {
       auto& marker = *uMarker;
       if (getDrcBox().intersects(marker.getBBox())) {
@@ -2098,7 +2183,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     }
 
     for (auto& net : getNets()) {
-      for (auto& connFig : net->getRouteConnFigs()) {if (connFig->typeId() == drcPathSeg) {
+      for (auto& connFig : net->getRouteConnFigs()) {
+        if (connFig->typeId() == drcPathSeg) {
           // 记录线长
           auto pathSeg = static_cast<drPathSeg*>(connFig.get());
           auto [bp, ep] = pathSeg->getPoints();
