@@ -2615,14 +2615,24 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
 
       string reqStr = msg.SerializeAsString();
       logger_->info(DRT, 991, "Requesting initial net order...");
+
+      std::cout << "Send nets: ";
+      for (auto netIdx : outerNetIdxRemaining) {
+        std::cout << netIdx << ", ";
+      }
+      std::cout << std::endl;
+
       string res = mq.request(reqStr);
       msg = openroad_api::net_ordering::Message();
       msg.ParseFromString(res);
       auto netOrder = msg.response().net_list();
 
+      std::cout << "Recv nets: ";
       for (auto& netIdx : netOrder) {
+        std::cout << netIdx << ", ";
         customOrder.push_back(netIdx);
       }
+      std::cout << std::endl;
     }
   }
 

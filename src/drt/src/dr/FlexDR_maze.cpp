@@ -2120,13 +2120,16 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
             }
           }
 
-          metricsDeltaMap[outerNetIdx][0] = violation - lastViolationCount;
-          metricsDeltaMap[outerNetIdx][1] = wireLength;
-          metricsDeltaMap[outerNetIdx][2] = via;
+          // 注意要判断 metricsDeltaMap[outerNetIdx] 是否为空，因为有些布局只有一个网络，
+          // 为了节省时间我设计成不询问算法端，因此 getOuterNetMap() 会为空，从而导致
+          // metricsDeltaMap 为空。
+          if (metricsDeltaMap.find(outerNetIdx) != metricsDeltaMap.end()) {
+            metricsDeltaMap[outerNetIdx][0] = violation - lastViolationCount;
+            metricsDeltaMap[outerNetIdx][1] = wireLength;
+            metricsDeltaMap[outerNetIdx][2] = via;
+          }
 
           lastViolationCount = violation;
-
-//          std::cout<<metricsDeltaMap[outerNetIdx][0]<<" "<<metricsDeltaMap[outerNetIdx][1]<<" "<<metricsDeltaMap[outerNetIdx][2]<<std::endl;
         }
       }
     }
