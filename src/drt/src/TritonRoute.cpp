@@ -101,6 +101,11 @@ void TritonRoute::setDebugDumpDR(bool on, const std::string& dumpDir)
   debug_->dumpDir = dumpDir;
 }
 
+void TritonRoute::setSkipDumpOneNetWorker(bool on)
+{
+  debug_->skipDumpOneNetWorker = on;
+}
+
 void TritonRoute::setDebugMaze(bool on)
 {
   debug_->debugMaze = on;

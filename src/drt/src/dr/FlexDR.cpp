@@ -206,6 +206,26 @@ int FlexDRWorker::main(frDesign* design)
   if (!skipRouting_) {
     init(design);
   }
+
+  if (debugSettings_->debugDumpDR
+      && debugSettings_->skipDumpOneNetWorker) {
+    // 如果一个布局内 pin 数大于 1 的网络不超过 1 个，则这个布局就不需要被 dump 出来训练。
+    int netCount = 0;
+    for (auto& net : nets_) {
+      if (net->getPins().size() > 1) {
+        netCount++;
+      }
+    }
+    if (netCount < 2) {
+      std::string workerPath = fmt::format("{}/workerx{}_y{}",
+                                           debugSettings_->dumpDir,
+                                           routeBox_.xMin(),
+                                           routeBox_.yMin());
+      std::string cmd = "rm -rf " + workerPath;
+      system(cmd.c_str());
+    }
+  }
+
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
   if (!skipRouting_) {
     route_queue();

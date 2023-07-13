@@ -251,15 +251,16 @@ proc detailed_route_debug { args } {
             -parallel_workers -reroute_nets_sort_mode \
             -api_addr -api_timeout -net_ordering_training \
             -net_ordering_evaluation} \
-      flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr -ta \
-             -dr_random_init_order -count_routed_and_rerouted \
-             -count_metrics_delta -skip_reroute -custom_strategies \
-             -single_worker_statistics}
+      flags {-dr -maze -pa -pa_markers -pa_edge -pa_commit -dump_dr \
+             -skip_dump_one_net_worker -ta -dr_random_init_order \
+             -count_routed_and_rerouted -count_metrics_delta -skip_reroute \
+             -custom_strategies -single_worker_statistics}
 
   sta::check_argc_eq0 "detailed_route_debug" $args
 
   set dr [info exists flags(-dr)]
   set dump_dr [info exists flags(-dump_dr)]
+  set skip_dump_one_net_worker [info exists flags(-skip_dump_one_net_worker)]
   set maze [info exists flags(-maze)]
   set pa [info exists flags(-pa)]
   set pa_markers [info exists flags(-pa_markers)]
@@ -356,11 +357,11 @@ proc detailed_route_debug { args } {
     set api_timeout 30000
   }
 
-  drt::set_detailed_route_debug_cmd $net_name $pin_name $dr $dump_dr $pa $maze \
-      $worker_x $worker_y $iter $custom_strategies $custom_size $custom_offset \
-      $parallel_workers $pa_markers $pa_edge $pa_commit $dump_dir \
-      $ta $dr_random_init_order $count_routed_and_rerouted \
-      $count_metrics_delta $skip_reroute \
+  drt::set_detailed_route_debug_cmd $net_name $pin_name $dr $dump_dr \
+      $skip_dump_one_net_worker $pa $maze $worker_x $worker_y $iter \
+      $custom_strategies $custom_size $custom_offset $parallel_workers \
+      $pa_markers $pa_edge $pa_commit $dump_dir $ta $dr_random_init_order \
+      $count_routed_and_rerouted $count_metrics_delta $skip_reroute \
       $reroute_nets_sort_mode $api_addr $api_timeout $net_ordering_training \
       $net_ordering_evaluation $single_worker_statistics
 }

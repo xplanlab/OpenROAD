@@ -186,6 +186,7 @@ set_detailed_route_debug_cmd(const char* net_name,
                              const char* pin_name,
                              bool dr,
                              bool dump_dr,
+                             bool skip_dump_one_net_worker,
                              bool pa,
                              bool maze,
                              int x, int y,
@@ -215,6 +216,7 @@ set_detailed_route_debug_cmd(const char* net_name,
   router->setDebugPinName(pin_name);
   router->setDebugDR(dr);
   router->setDebugDumpDR(dump_dr, dumpDir);
+  router->setSkipDumpOneNetWorker(skip_dump_one_net_worker);
   router->setDebugPA(pa);
   router->setDebugMaze(maze);
   if (x >= 0) {

@@ -300,6 +300,7 @@ struct frDebugSettings
   frDebugSettings()
       : debugDR(false),
         debugDumpDR(false),
+        skipDumpOneNetWorker(false),
         debugMaze(false),
         debugPA(false),
         debugTA(false),
@@ -339,6 +340,7 @@ struct frDebugSettings
 
   bool debugDR;
   bool debugDumpDR;
+  bool skipDumpOneNetWorker;
   bool debugMaze;
   bool debugPA;
   bool debugTA;
