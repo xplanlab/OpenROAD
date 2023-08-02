@@ -2616,6 +2616,10 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
       string reqStr = msg.SerializeAsString();
       logger_->info(DRT, 991, "Requesting initial net order...");
 
+      std::cout << "Current region: (" << routeBox_.xMin() << ", "
+                << routeBox_.yMin() << ") - (" << routeBox_.xMax() << ", "
+                << routeBox_.yMax() << ")" << std::endl;
+
       std::cout << "Send nets: ";
       for (auto netIdx : outerNetIdxRemaining) {
         std::cout << netIdx << ", ";
