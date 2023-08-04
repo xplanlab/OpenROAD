@@ -2617,7 +2617,9 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
 
       auto end = std::chrono::high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-      std::cout << "[1] data dump cost " << duration.count() << " us." << std::endl;
+      int nodeCount = req->nodes_size();
+      int netCount = req->nets_size();
+      std::cout << "[1] data dump cost " << duration.count() << " us with " << nodeCount << " nodes and " << netCount << " nets." << std::endl;
       start = end;
 
       string reqStr = msg.SerializeAsString();
