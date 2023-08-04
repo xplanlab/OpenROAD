@@ -1740,7 +1740,8 @@ void FlexDRWorker::identifyCongestionLevel()
 }
 
 int FlexDRWorker::queryNetOrder(utl::MQ& mq,
-                                vector<unsigned int> outerNetIdxRemaining)
+                                vector<unsigned int> outerNetIdxRemaining,
+                                vector<unsigned int> outerNetIdxRouted)
 {
   openroad_api::net_ordering::Message msg;
   openroad_api::net_ordering::Request* req = msg.mutable_request();
@@ -1750,6 +1751,9 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq,
 
   req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
                                 outerNetIdxRemaining.end()});
+
+  req->mutable_routed_nets()->CopyFrom({outerNetIdxRouted.begin(),
+                                        outerNetIdxRouted.end()});
 
   if (outerNetIdxRemaining.empty()) {
     req->set_is_done(true);
@@ -1807,6 +1811,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
     // 待布网络下标
     vector<unsigned int> outerNetIdxRemaining;
+    // 已布网络下标
+    vector<unsigned int> outerNetIdxRouted;
     // 构建外部 net 的索引
     map<unsigned int, drNet*> outerNetMap;
     int outerNetIdx = 0;
@@ -1820,7 +1826,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     setOuterNetMap(outerNetMap);
 
     while (!outerNetIdxRemaining.empty()) {
-      int selectedNetIdx = queryNetOrder(mq, outerNetIdxRemaining);
+      int selectedNetIdx = queryNetOrder(mq, outerNetIdxRemaining, outerNetIdxRouted);
+      outerNetIdxRouted.push_back(selectedNetIdx);
 
       // 一旦接收到 -1 就强制跳过布线流程
       if (selectedNetIdx == -1) {
@@ -1901,7 +1908,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
     // 如果是在训练模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
     if (debugSettings_->netOrderingTraining == 1) {
-      queryNetOrder(mq, outerNetIdxRemaining);
+      queryNetOrder(mq, outerNetIdxRemaining, outerNetIdxRouted);
     }
   } else {
     int initNetCnt = rerouteQueue.size();
