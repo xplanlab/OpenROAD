@@ -2607,13 +2607,25 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
       openroad_api::net_ordering::Message msg;
       openroad_api::net_ordering::Request* req = msg.mutable_request();
 
+      auto start = std::chrono::high_resolution_clock::now();
+
       // 获取 gridGraph 的数据
       gridGraph_.dump(req);
 
       req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
                                      outerNetIdxRemaining.end()});
 
+      auto end = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+      std::cout << "[1] data dump cost " << duration.count() << " us." << std::endl;
+      start = end;
+
       string reqStr = msg.SerializeAsString();
+
+      end = std::chrono::high_resolution_clock::now();
+      duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+      std::cout << "[2] data serialize cost " << duration.count() << " us." << std::endl;
+
       logger_->info(DRT, 991, "Requesting initial net order...");
 
       std::cout << "Current region: (" << routeBox_.xMin() << ", "
@@ -2626,7 +2638,14 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
       }
       std::cout << std::endl;
 
+      start = std::chrono::high_resolution_clock::now();
+
       string res = mq.request(reqStr);
+
+      end = std::chrono::high_resolution_clock::now();
+      duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+      std::cout << "[3] server process cost " << duration.count() << " us." << std::endl;
+
       msg = openroad_api::net_ordering::Message();
       msg.ParseFromString(res);
       auto netOrder = msg.response().net_list();
