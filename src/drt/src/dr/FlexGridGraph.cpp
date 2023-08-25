@@ -568,6 +568,11 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
   req->set_dim_y(yDim);
   req->set_dim_z(zDim);
 
+  Rect region = drWorker_->getRouteBox();
+  vector<long> regionBoxCoords({region.xMin(), region.yMin(), region.xMax(), region.yMax()});
+  req->mutable_region_coords()->CopyFrom({regionBoxCoords.begin(),
+                                          regionBoxCoords.end()});
+
   for (int z = 0; z < zDim; z++) {
 //    auto lNum = getLayerNum(z);
 //    auto layer = getTech()->getLayer(lNum);
