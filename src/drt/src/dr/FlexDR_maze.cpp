@@ -1915,6 +1915,15 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     int finishedNetCnt = 0;
     int finishedNetCntForMetricsDelta = 0;
 
+//    // 统计需要布线的网络的数量
+//    int netCnt = 0;
+//    for (auto& net : getNets()) {
+//      if (net->getPins().size() > 1) {
+//        netCnt++;
+//      }
+//    }
+//    std::cout<<"["<<netCnt<<"] "<<routeBox_.xMin()<<" "<<routeBox_.yMin()<<" "<<routeBox_.xMax()<<" "<<routeBox_.yMax()<<std::endl;
+
     // 用于记录指标增量
     map<unsigned int, vector<unsigned long>> metricsDeltaMap;
     map<drNet*, unsigned int> getOuterNetMapReverse;
