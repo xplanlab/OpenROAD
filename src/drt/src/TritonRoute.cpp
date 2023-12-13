@@ -176,6 +176,11 @@ void TritonRoute::setCustomOffset(int customOffset)
   debug_->customOffset = customOffset;
 }
 
+void TritonRoute::setGraphMode(int mode)
+{
+  debug_->graphMode = mode;
+}
+
 void TritonRoute::setParallelWorkers(int parallelWorkers)
 {
   debug_->parallelWorkers = parallelWorkers;

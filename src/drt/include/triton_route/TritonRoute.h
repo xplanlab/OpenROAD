@@ -146,6 +146,7 @@ class TritonRoute
   void setCustomStrategies(bool on = true);
   void setCustomSize(int customSize);
   void setCustomOffset(int customOffset);
+  void setGraphMode(int mode);
   void setParallelWorkers(int parallelWorkers);
   void setDrRandomInitOrder(bool on = true);
   void setSkipReroute(bool on = true);

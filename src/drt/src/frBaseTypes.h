@@ -312,6 +312,7 @@ struct frDebugSettings
         customStrategies(false),
         customSize(0),
         customOffset(0),
+        graphMode(0),
         parallelWorkers(0),
         drRandomInitOrder(false),
         countRoutedAndRerouted(false),
@@ -354,6 +355,7 @@ struct frDebugSettings
   bool customStrategies;
   int customSize;
   int customOffset;
+  int graphMode;
   int parallelWorkers;
   bool drRandomInitOrder;
   bool countRoutedAndRerouted;

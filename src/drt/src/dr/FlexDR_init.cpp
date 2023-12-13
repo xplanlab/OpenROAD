@@ -2615,6 +2615,11 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
       req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
                                      outerNetIdxRemaining.end()});
 
+      if (debugSettings_->graphMode == 1) {
+        // Graph 模式下不要传 nodes
+        req->clear_nodes();
+      }
+
       auto end = std::chrono::high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
       int nodeCount = req->nodes_size();

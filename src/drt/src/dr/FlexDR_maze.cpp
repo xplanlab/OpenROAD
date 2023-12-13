@@ -2181,6 +2181,85 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       auto* router = ord::getTritonRouteInstance();
       router->setRoutedAndReroutedCount(countMapJson);
     }
+
+    // 统计 Graph 模式数据
+    if (debugSettings_->graphMode == 1) {
+      openroad_api::net_ordering::Message msg;
+      openroad_api::net_ordering::Request* req = msg.mutable_request();
+      openroad_api::net_ordering::Graph* graph = req->mutable_graph();
+
+      // 线网的最小矩形
+      map<int, Rect> netRects;
+
+      // 计算布线区域的体积
+      int layerCount = gridGraph_.getLayerCount() + 1;
+      frArea regionVolume = getRouteBox().area() * layerCount;
+
+      // 遍历所有线网，获取线网特征
+      for (const auto& [outerIndex, net] : getOuterNetMap()) {
+        float pinNum = net->getPins().size();
+        int accessPointNum = 0;
+
+        int xlo = INT_MAX, xhi = INT_MIN, ylo = INT_MAX, yhi = INT_MIN, zlo = INT_MAX, zhi = INT_MIN;
+
+        // 遍历线网的所有 pin
+        for (auto& uPin : net->getPins()) {
+          for (auto& uAP : uPin.get()->getAccessPatterns()) {
+            accessPointNum++;
+
+            // 计算该线网所有 pin 所围成的最小矩形
+            drAccessPattern* ap = uAP.get();
+            xlo = min(xlo, ap->getPoint().x());
+            xhi = max(xhi, ap->getPoint().x());
+            ylo = min(ylo, ap->getPoint().y());
+            yhi = max(yhi, ap->getPoint().y());
+            zlo = min(zlo, ap->getBeginLayerNum());
+            zhi = max(zhi, ap->getBeginLayerNum());
+          }
+        }
+
+        // 记录线网的最小矩形
+        netRects[outerIndex] = Rect(xlo, ylo, xhi, yhi);
+
+        // 该线网平均每个 pin 的 access point 数量
+        float accessPointRatio = (float) accessPointNum / pinNum;
+
+        // 计算该线网体积占布线区域体积的比例
+        float regionVolumeRatio = (float) (xhi - xlo + 1) * (yhi - ylo + 1) * (zhi - zlo + 1) / regionVolume;
+
+        // 记录线网的特征属性
+        openroad_api::net_ordering::NodeProperty* nodeProperty = graph->add_node_properties();
+        nodeProperty->add_values(pinNum);
+        nodeProperty->add_values(accessPointRatio);
+        nodeProperty->add_values(regionVolumeRatio);
+      }
+
+      // 遍历所有线网，看哪两个线网有重叠
+      for (int i = 0; i < netRects.size(); i++) {
+        for (int j = i + 1; j < netRects.size(); j++) {
+          if (netRects[i].intersects(netRects[j])) {
+            openroad_api::net_ordering::EdgeConnection* edgeConnection = graph->add_edge_connections();
+            edgeConnection->add_values(i);
+            edgeConnection->add_values(j);
+          }
+        }
+      }
+
+      req->set_is_done(true);
+
+      // 获取 gridGraph 的数据
+      gridGraph_.dump(req);
+
+      if (debugSettings_->graphMode == 1) {
+        // Graph 模式下不要传 nodes
+        req->clear_nodes();
+      }
+
+      std::string reqStr = msg.SerializeAsString();
+      std::string addr = "tcp://" + debugSettings_->apiAddr;
+      utl::MQ mq(addr, debugSettings_->apiTimeout);
+      mq.request(reqStr);
+    }
   }
 
   // 单 worker 指标统计
