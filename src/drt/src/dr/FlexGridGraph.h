@@ -937,7 +937,7 @@ class FlexGridGraph
   void setUsedPointsForDump(openroad_api::net_ordering::Request* req,
                             FlexMazeIdx beginMazeIdx,
                             FlexMazeIdx endMazeIdx);
-  void dump(openroad_api::net_ordering::Request* req);
+  void dump(openroad_api::net_ordering::Request* req, bool graphMode = false);
 
  private:
   frTechObject* tech_;

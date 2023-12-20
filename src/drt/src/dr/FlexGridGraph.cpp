@@ -560,7 +560,7 @@ void FlexGridGraph::setUsedPointsForDump(
   }
 }
 
-void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
+void FlexGridGraph::dump(openroad_api::net_ordering::Request* req, bool graphMode)
 {
   int xDim, yDim, zDim;
   getDim(xDim, yDim, zDim);
@@ -573,44 +573,46 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
   req->mutable_region_coords()->CopyFrom({regionBoxCoords.begin(),
                                           regionBoxCoords.end()});
 
-  for (int z = 0; z < zDim; z++) {
-//    auto lNum = getLayerNum(z);
-//    auto layer = getTech()->getLayer(lNum);
+  if (!graphMode) {
+    for (int z = 0; z < zDim; z++) {
+      //    auto lNum = getLayerNum(z);
+      //    auto layer = getTech()->getLayer(lNum);
 
-    for (int y = 0; y < yDim; y++) {
-      for (int x = 0; x < xDim; x++) {
-        openroad_api::net_ordering::Node* node = req->add_nodes();
+      for (int y = 0; y < yDim; y++) {
+        for (int x = 0; x < xDim; x++) {
+          openroad_api::net_ordering::Node* node = req->add_nodes();
 
-        node->set_maze_x(x);
-        node->set_maze_y(y);
-        node->set_maze_z(z);
+          node->set_maze_x(x);
+          node->set_maze_y(y);
+          node->set_maze_z(z);
 
-        Point pt;
-        getPoint(pt, x, y);
-        node->set_point_x(pt.x());
-        node->set_point_y(pt.y());
-        node->set_point_z(getZHeight(z));
+          Point pt;
+          getPoint(pt, x, y);
+          node->set_point_x(pt.x());
+          node->set_point_y(pt.y());
+          node->set_point_z(getZHeight(z));
 
-        // 先设置部分值
-        bool isBlockage = isAllBlocked(x, y, z);
-        node->set_type(isBlockage ? openroad_api::net_ordering::BLOCKAGE
-                                 : openroad_api::net_ordering::NORMAL);
-        node->set_is_used(isBlockage);
+          // 先设置部分值
+          bool isBlockage = isAllBlocked(x, y, z);
+          node->set_type(isBlockage ? openroad_api::net_ordering::BLOCKAGE
+                                    : openroad_api::net_ordering::NORMAL);
+          node->set_is_used(isBlockage);
 
-//        frDirEnum frDirEnumAllCustom[] = {frDirEnum::E,
-//                                    frDirEnum::S,
-//                                    frDirEnum::W,
-//                                    frDirEnum::N,
-//                                    frDirEnum::U,
-//                                    frDirEnum::D};
-//        for (const auto dir : frDirEnumAllCustom) {
-//          int cost = -1;
-//          if (hasEdge(x, y, z, dir)) {
-//            // TODO 参照 src/drt/src/dr/FlexGridGraph_maze.cpp:L436，那里有区分 NDR，因不清楚作用，所以暂时忽略
-//            cost = getCosts(x, y, z, dir, layer);
-//          }
-//          costs.push_back(cost);
-//        }
+          //        frDirEnum frDirEnumAllCustom[] = {frDirEnum::E,
+          //                                    frDirEnum::S,
+          //                                    frDirEnum::W,
+          //                                    frDirEnum::N,
+          //                                    frDirEnum::U,
+          //                                    frDirEnum::D};
+          //        for (const auto dir : frDirEnumAllCustom) {
+          //          int cost = -1;
+          //          if (hasEdge(x, y, z, dir)) {
+          //            // TODO 参照 src/drt/src/dr/FlexGridGraph_maze.cpp:L436，那里有区分 NDR，因不清楚作用，所以暂时忽略
+          //            cost = getCosts(x, y, z, dir, layer);
+          //          }
+          //          costs.push_back(cost);
+          //        }
+        }
       }
     }
   }
@@ -648,13 +650,15 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
     for (auto& pin : net->getPins()) {
       pinIdx++;
 
-      for (auto& ap : pin->getAccessPatterns()) {
-        FlexMazeIdx mi = ap->getMazeIdx();
-        int idx = getIdx(mi.x(), mi.y(), mi.z());
-        openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
-        node->set_type(openroad_api::net_ordering::ACCESS);
-        node->set_net(outerNetMapExchanged[net.get()]);
-        node->set_pin(pinIdx);
+      if (!graphMode) {
+        for (auto& ap : pin->getAccessPatterns()) {
+          FlexMazeIdx mi = ap->getMazeIdx();
+          int idx = getIdx(mi.x(), mi.y(), mi.z());
+          openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
+          node->set_type(openroad_api::net_ordering::ACCESS);
+          node->set_net(outerNetMapExchanged[net.get()]);
+          node->set_pin(pinIdx);
+        }
       }
     }
 
@@ -662,10 +666,12 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
       if (connFig->typeId() == drcPathSeg) {
         auto pathSeg = static_cast<drPathSeg*>(connFig.get());
 
-        // 记录已使用的点
-        FlexMazeIdx beginMazeIdx, endMazeIdx;
-        std::tie(beginMazeIdx, endMazeIdx) = pathSeg->getMazeIdx();
-        setUsedPointsForDump(req, beginMazeIdx, endMazeIdx);
+        if (!graphMode) {
+          // 记录已使用的点
+          FlexMazeIdx beginMazeIdx, endMazeIdx;
+          std::tie(beginMazeIdx, endMazeIdx) = pathSeg->getMazeIdx();
+          setUsedPointsForDump(req, beginMazeIdx, endMazeIdx);
+        }
 
         // 记录线长
         auto [bp, ep] = pathSeg->getPoints();
@@ -674,10 +680,12 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req)
       } else if (connFig->typeId() == drcVia) {
         auto viaSeg = static_cast<drVia*>(connFig.get());
 
-        // 记录已使用的点
-        FlexMazeIdx beginMazeIdx, endMazeIdx;
-        std::tie(beginMazeIdx, endMazeIdx) = viaSeg->getMazeIdx();
-        setUsedPointsForDump(req, beginMazeIdx, endMazeIdx);
+        if (!graphMode) {
+          // 记录已使用的点
+          FlexMazeIdx beginMazeIdx, endMazeIdx;
+          std::tie(beginMazeIdx, endMazeIdx) = viaSeg->getMazeIdx();
+          setUsedPointsForDump(req, beginMazeIdx, endMazeIdx);
+        }
 
         // 记录过孔数量
         via++;

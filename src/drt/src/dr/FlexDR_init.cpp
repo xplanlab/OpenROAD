@@ -31,6 +31,7 @@
 
 #include "dr/FlexDR.h"
 #include "frRTree.h"
+#include "dr/Custom.h"
 
 using namespace std;
 using namespace fr;
@@ -2564,9 +2565,7 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
   vector<RouteQueueEntry> customOrderRoutes;  // 记录即将替换掉初始排序的临时序列
 
   // 当为「替换初始排序」模式时，使用算法排序好的序列
-  if (debugSettings_->apiAddr != ""
-      && (debugSettings_->netOrderingTraining == 2
-          || debugSettings_->netOrderingEvaluation == 2)) {
+  if (debugSettings_->netOrderingTraining == 2 || debugSettings_->netOrderingEvaluation == 2) {
     std::string addr = "tcp://" + debugSettings_->apiAddr;
     utl::MQ mq(addr, debugSettings_->apiTimeout);
 
@@ -2610,14 +2609,13 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
       auto start = std::chrono::high_resolution_clock::now();
 
       // 获取 gridGraph 的数据
-      gridGraph_.dump(req);
+      gridGraph_.dump(req, debugSettings_->graphMode == 1);
 
       req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
                                      outerNetIdxRemaining.end()});
 
       if (debugSettings_->graphMode == 1) {
-        // Graph 模式下不要传 nodes
-        req->clear_nodes();
+        Custom::generateGraph(req, this);
       }
 
       auto end = std::chrono::high_resolution_clock::now();

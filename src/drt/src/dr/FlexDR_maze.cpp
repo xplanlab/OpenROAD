@@ -39,6 +39,7 @@
 #include "gc/FlexGC.h"
 #include "triton_route/MakeTritonRoute.h"
 #include "utl/MyLogger.h"
+#include "dr/Custom.h"
 
 using namespace std;
 using namespace fr;
@@ -1739,8 +1740,7 @@ void FlexDRWorker::identifyCongestionLevel()
   }
 }
 
-int FlexDRWorker::queryNetOrder(utl::MQ& mq,
-                                vector<unsigned int> outerNetIdxRemaining,
+int FlexDRWorker::queryNetOrderWithGrid(vector<unsigned int> outerNetIdxRemaining,
                                 vector<unsigned int> outerNetIdxRouted)
 {
   openroad_api::net_ordering::Message msg;
@@ -1759,8 +1759,11 @@ int FlexDRWorker::queryNetOrder(utl::MQ& mq,
     req->set_is_done(true);
   }
 
-  int selectedNetIdx;
   string reqStr = msg.SerializeAsString();
+  std::string addr = "tcp://" + debugSettings_->apiAddr;
+  utl::MQ mq(addr, debugSettings_->apiTimeout);
+
+  int selectedNetIdx;
 
   if (outerNetIdxRemaining.empty()) {
     logger_->info(DRT, 994, "Sending done message...");
@@ -1803,12 +1806,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
   auto& workerRegionQuery = getWorkerRegionQuery();
 
   // 单步的训练模式或推断模式
-  if (debugSettings_->apiAddr != ""
-      && (debugSettings_->netOrderingTraining == 1
-          || debugSettings_->netOrderingEvaluation == 1)) {
-    std::string addr = "tcp://" + debugSettings_->apiAddr;
-    utl::MQ mq(addr, debugSettings_->apiTimeout);
-
+  if (debugSettings_->netOrderingTraining == 1 || debugSettings_->netOrderingEvaluation == 1) {
     // 待布网络下标
     vector<unsigned int> outerNetIdxRemaining;
     // 已布网络下标
@@ -1826,7 +1824,15 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     setOuterNetMap(outerNetMap);
 
     while (!outerNetIdxRemaining.empty()) {
-      int selectedNetIdx = queryNetOrder(mq, outerNetIdxRemaining, outerNetIdxRouted);
+      int selectedNetIdx = -1;
+
+      if (debugSettings_->graphMode == 1) {
+        // 单步的 graph 模式
+        selectedNetIdx = Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &outerNetIdxRemaining);
+      } else {
+        selectedNetIdx = queryNetOrderWithGrid(outerNetIdxRemaining, outerNetIdxRouted);
+      }
+
       outerNetIdxRouted.push_back(selectedNetIdx);
 
       // 一旦接收到 -1 就强制跳过布线流程
@@ -1906,9 +1912,11 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       route_queue_addMarkerCost(gcWorker_->getMarkers());
     }
 
-    // 如果是在训练模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
+    // 如果是在单步模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
     if (debugSettings_->netOrderingTraining == 1) {
-      queryNetOrder(mq, outerNetIdxRemaining, outerNetIdxRouted);
+      queryNetOrderWithGrid(outerNetIdxRemaining, outerNetIdxRouted);
+    } else if (debugSettings_->netOrderingEvaluation == 1) {
+      Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &outerNetIdxRemaining);
     }
   } else {
     int initNetCnt = rerouteQueue.size();
@@ -2166,100 +2174,28 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       auto* router = ord::getTritonRouteInstance();
       router->setMetricsDelta(countMetricsDeltaJson);
     }
+  }
 
-    // 统计 routed / rerouted 次数
-    if (debugSettings_->countRoutedAndRerouted) {
-      // 初始化计数表，从 outerNet 提取待布线网络
-      map<unsigned int, unsigned int> countMap;
-      std::string countMapJson = "{";
-      for (const auto& [outerIndex, net] : getOuterNetMap()) {
-        countMap[outerIndex] = net->getNumReroutes();
-        countMapJson += "\"" + std::to_string(outerIndex) + "\":" + std::to_string(net->getNumReroutes()) + ",";
-      }
-      countMapJson.pop_back();
-      countMapJson += "}";
-      auto* router = ord::getTritonRouteInstance();
-      router->setRoutedAndReroutedCount(countMapJson);
+  // 统计 routed / rerouted 次数
+  if (debugSettings_->countRoutedAndRerouted) {
+    // 初始化计数表，从 outerNet 提取待布线网络
+    map<unsigned int, unsigned int> countMap;
+    std::string countMapJson = "{";
+    for (const auto& [outerIndex, net] : getOuterNetMap()) {
+      countMap[outerIndex] = net->getNumReroutes();
+      countMapJson += "\"" + std::to_string(outerIndex) + "\":" + std::to_string(net->getNumReroutes()) + ",";
     }
+    countMapJson.pop_back();
+    countMapJson += "}";
+    auto* router = ord::getTritonRouteInstance();
+    router->setRoutedAndReroutedCount(countMapJson);
+  }
 
-    // 统计 Graph 模式数据
-    if (debugSettings_->graphMode == 1) {
-      openroad_api::net_ordering::Message msg;
-      openroad_api::net_ordering::Request* req = msg.mutable_request();
-      openroad_api::net_ordering::Graph* graph = req->mutable_graph();
-
-      // 线网的最小矩形
-      map<int, Rect> netRects;
-
-      // 计算布线区域的体积
-      int layerCount = gridGraph_.getLayerCount() + 1;
-      frArea regionVolume = getRouteBox().area() * layerCount;
-
-      // 遍历所有线网，获取线网特征
-      for (const auto& [outerIndex, net] : getOuterNetMap()) {
-        float pinNum = net->getPins().size();
-        int accessPointNum = 0;
-
-        int xlo = INT_MAX, xhi = INT_MIN, ylo = INT_MAX, yhi = INT_MIN, zlo = INT_MAX, zhi = INT_MIN;
-
-        // 遍历线网的所有 pin
-        for (auto& uPin : net->getPins()) {
-          for (auto& uAP : uPin.get()->getAccessPatterns()) {
-            accessPointNum++;
-
-            // 计算该线网所有 pin 所围成的最小矩形
-            drAccessPattern* ap = uAP.get();
-            xlo = min(xlo, ap->getPoint().x());
-            xhi = max(xhi, ap->getPoint().x());
-            ylo = min(ylo, ap->getPoint().y());
-            yhi = max(yhi, ap->getPoint().y());
-            zlo = min(zlo, ap->getBeginLayerNum());
-            zhi = max(zhi, ap->getBeginLayerNum());
-          }
-        }
-
-        // 记录线网的最小矩形
-        netRects[outerIndex] = Rect(xlo, ylo, xhi, yhi);
-
-        // 该线网平均每个 pin 的 access point 数量
-        float accessPointRatio = (float) accessPointNum / pinNum;
-
-        // 计算该线网体积占布线区域体积的比例
-        float regionVolumeRatio = (float) (xhi - xlo + 1) * (yhi - ylo + 1) * (zhi - zlo + 1) / regionVolume;
-
-        // 记录线网的特征属性
-        openroad_api::net_ordering::NodeProperty* nodeProperty = graph->add_node_properties();
-        nodeProperty->add_values(pinNum);
-        nodeProperty->add_values(accessPointRatio);
-        nodeProperty->add_values(regionVolumeRatio);
-      }
-
-      // 遍历所有线网，看哪两个线网有重叠
-      for (int i = 0; i < netRects.size(); i++) {
-        for (int j = i + 1; j < netRects.size(); j++) {
-          if (netRects[i].intersects(netRects[j])) {
-            openroad_api::net_ordering::EdgeConnection* edgeConnection = graph->add_edge_connections();
-            edgeConnection->add_values(i);
-            edgeConnection->add_values(j);
-          }
-        }
-      }
-
-      req->set_is_done(true);
-
-      // 获取 gridGraph 的数据
-      gridGraph_.dump(req);
-
-      if (debugSettings_->graphMode == 1) {
-        // Graph 模式下不要传 nodes
-        req->clear_nodes();
-      }
-
-      std::string reqStr = msg.SerializeAsString();
-      std::string addr = "tcp://" + debugSettings_->apiAddr;
-      utl::MQ mq(addr, debugSettings_->apiTimeout);
-      mq.request(reqStr);
-    }
+  // action_list 模式最后还要再单独发一次 Graph 数据
+  if ((debugSettings_->netOrderingTraining == 2 || debugSettings_->netOrderingEvaluation == 2)
+      && debugSettings_->graphMode == 1) {
+    vector<unsigned int> empty;
+    Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &empty);
   }
 
   // 单 worker 指标统计

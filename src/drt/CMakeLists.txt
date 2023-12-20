@@ -75,6 +75,7 @@ target_sources(drt
     src/dr/FlexDR_maze.cpp
     src/dr/FlexGridGraph_maze.cpp
     src/dr/FlexGridGraph.cpp
+    src/dr/Custom.cpp
     src/dr/FlexDR_rq.cpp
     src/dr/FlexDR_end.cpp
     src/dr/FlexDR_graphics.cpp
