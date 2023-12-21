@@ -2564,6 +2564,13 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
   vector<unsigned int> customOrder; // 记录算法端给出的排序
   vector<RouteQueueEntry> customOrderRoutes;  // 记录即将替换掉初始排序的临时序列
 
+  if (debugSettings_->drRandomInitOrder) {
+    // 打乱 routes 元素顺序
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(routes.begin(), routes.end(), g);
+  }
+
   // 当为「替换初始排序」模式时，使用算法排序好的序列
   if (debugSettings_->netOrderingTraining == 2 || debugSettings_->netOrderingEvaluation == 2) {
     std::string addr = "tcp://" + debugSettings_->apiAddr;
@@ -2672,13 +2679,6 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
     }
 
     routes = customOrderRoutes;
-  }
-
-  if (debugSettings_->drRandomInitOrder) {
-    // 打乱 routes 元素顺序
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(routes.begin(), routes.end(), g);
   }
 
   // 依次将 route 和 check 中的元素压入队列
