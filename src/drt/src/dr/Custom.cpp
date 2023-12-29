@@ -3,8 +3,8 @@
 //
 
 #include "Custom.h"
-#include "FlexGridGraph.h"
 
+#include "FlexGridGraph.h"
 
 int Custom::queryNetOrderWithGraph(FlexDRWorker* drWorker,
                                    frDebugSettings* debugSettings,
@@ -14,10 +14,10 @@ int Custom::queryNetOrderWithGraph(FlexDRWorker* drWorker,
   openroad_api::net_ordering::Message msg;
   openroad_api::net_ordering::Request* req = msg.mutable_request();
 
-  generateGraph(req, drWorker);
+  generateGraph(req, drWorker, outerNetIdxRemaining);
 
-  req->mutable_nets()->CopyFrom({outerNetIdxRemaining->begin(),
-                                 outerNetIdxRemaining->end()});
+  req->mutable_nets()->CopyFrom(
+      {outerNetIdxRemaining->begin(), outerNetIdxRemaining->end()});
 
   if (outerNetIdxRemaining->empty()) {
     req->set_is_done(true);
@@ -40,7 +40,9 @@ int Custom::queryNetOrderWithGraph(FlexDRWorker* drWorker,
   }
 }
 
-void Custom::generateGraph(openroad_api::net_ordering::Request* req, FlexDRWorker* drWorker)
+void Custom::generateGraph(openroad_api::net_ordering::Request* req,
+                           FlexDRWorker* drWorker,
+                           vector<unsigned int>* outerNetIdxRemaining)
 {
   openroad_api::net_ordering::Graph* graph = req->mutable_graph();
 
@@ -60,7 +62,8 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req, FlexDRWorke
     float pinNum = net->getPins().size();
     int accessPointNum = 0;
 
-    int xlo = INT_MAX, xhi = INT_MIN, ylo = INT_MAX, yhi = INT_MIN, zlo = INT_MAX, zhi = INT_MIN;
+    int xlo = INT_MAX, xhi = INT_MIN, ylo = INT_MAX, yhi = INT_MIN,
+        zlo = INT_MAX, zhi = INT_MIN;
 
     // 遍历线网的所有 pin
     for (auto& uPin : net->getPins()) {
@@ -85,10 +88,12 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req, FlexDRWorke
     float accessPointRatio = (float) accessPointNum / pinNum;
 
     // 计算该线网体积占布线区域体积的比例
-    float regionVolumeRatio = (float) (xhi - xlo + 1) * (yhi - ylo + 1) * (zhi - zlo + 1) / regionVolume;
+    float regionVolumeRatio = (float) (xhi - xlo + 1) * (yhi - ylo + 1)
+                              * (zhi - zlo + 1) / regionVolume;
 
     // 记录线网的特征属性
-    openroad_api::net_ordering::NodeProperty* nodeProperty = graph->add_node_properties();
+    openroad_api::net_ordering::NodeProperty* nodeProperty
+        = graph->add_node_properties();
     nodeProperty->add_values(pinNum);
     nodeProperty->add_values(accessPointRatio);
     nodeProperty->add_values(regionVolumeRatio);
@@ -98,10 +103,30 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req, FlexDRWorke
   for (int i = 0; i < netRects.size(); i++) {
     for (int j = i + 1; j < netRects.size(); j++) {
       if (netRects[i].intersects(netRects[j])) {
-        openroad_api::net_ordering::EdgeConnection* edgeConnection = graph->add_edge_connections();
+        openroad_api::net_ordering::EdgeConnection* edgeConnection
+            = graph->add_edge_connections();
         edgeConnection->add_values(i);
         edgeConnection->add_values(j);
       }
     }
   }
+
+  // 更新 is_routed 特征
+  for (int i = 0; i < graph->node_properties_size(); i++) {
+    if (outerNetIdxRemaining != nullptr
+        && find(outerNetIdxRemaining->begin(), outerNetIdxRemaining->end(), i)
+               == outerNetIdxRemaining->end()) {
+      graph->mutable_node_properties(i)->add_values(1);
+    } else {
+      graph->mutable_node_properties(i)->add_values(0);
+    }
+  }
+
+//    for (int i = 0; i < graph->node_properties_size(); i++) {
+//      cout << i << ": ";
+//      for (int j = 0; j < graph->node_properties(i).values_size(); j++) {
+//        cout << graph->node_properties(i).values(j) << " ";
+//      }
+//      cout << endl;
+//    }
 }

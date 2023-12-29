@@ -21,7 +21,9 @@ public:
                                      Logger* logger,
                                      vector<unsigned int>* outerNetIdxRemaining);
 
-  static void generateGraph(openroad_api::net_ordering::Request* req, FlexDRWorker* drWorker);
+  static void generateGraph(openroad_api::net_ordering::Request* req,
+                            FlexDRWorker* drWorker,
+                            vector<unsigned int>* outerNetIdxRemaining = nullptr);
 };
 
 #endif  // OPENROAD_CUSTOM_H
