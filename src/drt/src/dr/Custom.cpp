@@ -122,11 +122,19 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
     }
   }
 
-//    for (int i = 0; i < graph->node_properties_size(); i++) {
-//      cout << i << ": ";
-//      for (int j = 0; j < graph->node_properties(i).values_size(); j++) {
-//        cout << graph->node_properties(i).values(j) << " ";
-//      }
-//      cout << endl;
+//  for (int i = 0; i < graph->node_properties_size(); i++) {
+//    cout << i << ": ";
+//    for (int j = 0; j < graph->node_properties(i).values_size(); j++) {
+//      cout << graph->node_properties(i).values(j) << " ";
 //    }
+//    cout << endl;
+//  }
+//
+//  for (int i = 0; i < graph->edge_connections_size(); i++) {
+//    cout << i << ": ";
+//    for (int j = 0; j < graph->edge_connections(i).values_size(); j++) {
+//      cout << graph->edge_connections(i).values(j) << " ";
+//    }
+//    cout << endl;
+//  }
 }
