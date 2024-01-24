@@ -1823,6 +1823,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     }
     setOuterNetMap(outerNetMap);
 
+    // 因为这里的循环是以 outerNetIdxRemaining 为准，里面放的是所有 pin 数大于 1 的网络，而后续并不会从
+    // rerouteQueue 中获取那些冲突后新加入的网络，所以当为单步模式时，就已经隐性地启用了 skip_reroute 功能
     while (!outerNetIdxRemaining.empty()) {
       int selectedNetIdx = -1;
 
