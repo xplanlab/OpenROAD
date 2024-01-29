@@ -23,7 +23,7 @@ public:
 
   static void generateGraph(openroad_api::net_ordering::Request* req,
                             FlexDRWorker* drWorker,
-                            vector<unsigned int>* outerNetIdxRemaining = nullptr);
+                            vector<unsigned int>* unroutedIds = nullptr);
 };
 
 #endif  // OPENROAD_CUSTOM_H
