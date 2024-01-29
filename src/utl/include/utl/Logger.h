@@ -295,7 +295,7 @@ class Logger
   };
   using DebugGroups = std::map<std::string, int, StringViewCmp>;
 
-  static constexpr int max_message_id = 9999;
+  static constexpr int max_message_id = 9999999;
 
   // Stop issuing messages of a given tool/id when this limit is hit.
   static int max_message_print;
