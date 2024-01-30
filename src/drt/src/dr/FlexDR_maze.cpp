@@ -1812,9 +1812,9 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     // 已布网络下标
     vector<unsigned int> outerNetIdxRouted;
     // 外部 ID 与 netEntry 的映射
-    map<unsigned int, RouteQueueEntry> outerNetEntryMap;
+    map<unsigned int, RouteQueueEntry> outerNetEntryMap;  // <outerId, entry>
     // 外部 ID 与 net 的映射
-    map<unsigned int, drNet*> outerNetMap;
+    map<unsigned int, drNet*> outerNetMap;  // <outerId, net>
 
     // 把 rerouteQueue 中的所有 #pin > 1 的网络放入 outerNetIdxRemaining
     int outerNetIdx = 0;
@@ -1831,6 +1831,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
       rerouteQueue.pop();
     }
+    // 把 outerNetMap 保存到 worker 成员中，方便在 drWorker 内任意地方使用，或者通过 drWorker_ 变量来使用，比如 Custom::queryNetOrderWithGraph
     setOuterNetMap(outerNetMap);
 
     while (true) {

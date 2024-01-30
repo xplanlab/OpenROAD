@@ -72,6 +72,11 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
 
         // 计算该线网所有 pin 所围成的最小矩形
         drAccessPattern* ap = uAP.get();
+
+        auto point = ap->getPoint();
+        // 打印 point 指针的值
+        cout << point << endl;
+
         xlo = min(xlo, ap->getPoint().x());
         xhi = max(xhi, ap->getPoint().x());
         ylo = min(ylo, ap->getPoint().y());
@@ -97,9 +102,21 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
     nodeProperty->add_values(pinNum);
     nodeProperty->add_values(accessPointRatio);
     nodeProperty->add_values(regionVolumeRatio);
+
+    // is_routed 特征
+    int isRouted = 0;
+    if (outerNetIdxRemaining != nullptr
+        && find(outerNetIdxRemaining->begin(), outerNetIdxRemaining->end(), outerIndex)
+               == outerNetIdxRemaining->end()) {
+      isRouted = 1; // 仅当该线网 ID 不在待布网络列表 outerNetIdxRemaining 中时，才认为它已经被布过
+    }
+    nodeProperty->add_values(isRouted);
   }
 
   // 遍历所有线网，看哪两个线网有重叠
+  // 注意：由于对 drWorker->getOuterNetMap() 使用了 range-based for loop，所以此时 outerId 是从 0 开始从小到大排序的，
+  // 又由于 graph->add_node_properties 是从下标 0 开始插入的数组，graph->add_edge_connections 也是，
+  // 从而 graph->edge_connections 可通过 netRects[outerIndex] 对应回 graph->node_properties 的顺序上
   for (int i = 0; i < netRects.size(); i++) {
     for (int j = i + 1; j < netRects.size(); j++) {
       if (netRects[i].intersects(netRects[j])) {
@@ -108,17 +125,6 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
         edgeConnection->add_values(i);
         edgeConnection->add_values(j);
       }
-    }
-  }
-
-  // 更新 is_routed 特征
-  for (int i = 0; i < graph->node_properties_size(); i++) {
-    if (outerNetIdxRemaining != nullptr
-        && find(outerNetIdxRemaining->begin(), outerNetIdxRemaining->end(), i)
-               == outerNetIdxRemaining->end()) {
-      graph->mutable_node_properties(i)->add_values(1);
-    } else {
-      graph->mutable_node_properties(i)->add_values(0);
     }
   }
 
