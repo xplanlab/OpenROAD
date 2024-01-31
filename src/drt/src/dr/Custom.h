@@ -19,11 +19,11 @@ class Custom
   static int queryNetOrderWithGraph(FlexDRWorker* drWorker,
                                     frDebugSettings* debugSettings,
                                     Logger* logger,
-                                    vector<unsigned int>* outerNetIdxRemaining);
+                                    vector<unsigned int>* unroutedOuterIds);
 
   static void generateGraph(openroad_api::net_ordering::Request* req,
                             FlexDRWorker* drWorker,
-                            vector<unsigned int>* outerNetIdxRemaining = nullptr);
+                            vector<unsigned int>* unroutedOuterIds = nullptr);
 };
 
 #endif  // OPENROAD_CUSTOM_H

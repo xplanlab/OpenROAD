@@ -9,17 +9,17 @@
 int Custom::queryNetOrderWithGraph(FlexDRWorker* drWorker,
                                    frDebugSettings* debugSettings,
                                    Logger* logger,
-                                   vector<unsigned int>* outerNetIdxRemaining)
+                                   vector<unsigned int>* unroutedOuterIds)
 {
   openroad_api::net_ordering::Message msg;
   openroad_api::net_ordering::Request* req = msg.mutable_request();
 
-  generateGraph(req, drWorker, outerNetIdxRemaining);
+  generateGraph(req, drWorker, unroutedOuterIds);
 
   req->mutable_nets()->CopyFrom(
-      {outerNetIdxRemaining->begin(), outerNetIdxRemaining->end()});
+      {unroutedOuterIds->begin(), unroutedOuterIds->end()});
 
-  if (outerNetIdxRemaining->empty()) {
+  if (unroutedOuterIds->empty()) {
     req->set_is_done(true);
     logger->info(DRT, 982, "Sending done message...");
   }
@@ -29,7 +29,7 @@ int Custom::queryNetOrderWithGraph(FlexDRWorker* drWorker,
   utl::MQ mq(addr, debugSettings->apiTimeout);
   string res = mq.request(reqStr);
 
-  if (outerNetIdxRemaining->empty()) {
+  if (unroutedOuterIds->empty()) {
     return -1;
   } else {
     msg = openroad_api::net_ordering::Message();
@@ -42,7 +42,7 @@ int Custom::queryNetOrderWithGraph(FlexDRWorker* drWorker,
 
 void Custom::generateGraph(openroad_api::net_ordering::Request* req,
                            FlexDRWorker* drWorker,
-                           vector<unsigned int>* outerNetIdxRemaining)
+                           vector<unsigned int>* unroutedOuterIds)
 {
   openroad_api::net_ordering::Graph* graph = req->mutable_graph();
 
@@ -58,7 +58,7 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
   frArea regionVolume = drWorker->getRouteBox().area() * layerCount;
 
   // 遍历所有线网，获取线网特征
-  for (const auto& [outerIndex, net] : drWorker->getOuterNetMap()) {
+  for (const auto& [outerIndex, net] : drWorker->getOuterIdToNet()) {
     float pinNum = net->getPins().size();
     int accessPointNum = 0;
 
@@ -66,21 +66,16 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
         zlo = INT_MAX, zhi = INT_MIN;
 
     // 遍历线网的所有 pin
-    for (auto& uPin : net->getPins()) {
-      for (auto& uAP : uPin.get()->getAccessPatterns()) {
+    for (auto& pin : net->getPins()) {
+      for (auto& ap : pin->getAccessPatterns()) {
         accessPointNum++;
 
         // 计算该线网所有 pin 所围成的最小矩形
-        drAccessPattern* ap = uAP.get();
-
-        auto point = ap->getPoint();
-        // 打印 point 指针的值
-        cout << point << endl;
-
-        xlo = min(xlo, ap->getPoint().x());
-        xhi = max(xhi, ap->getPoint().x());
-        ylo = min(ylo, ap->getPoint().y());
-        yhi = max(yhi, ap->getPoint().y());
+        auto pt = ap->getPoint();
+        xlo = min(xlo, pt.x());
+        xhi = max(xhi, pt.x());
+        ylo = min(ylo, pt.y());
+        yhi = max(yhi, pt.y());
         zlo = min(zlo, ap->getBeginLayerNum());
         zhi = max(zhi, ap->getBeginLayerNum());
       }
@@ -105,10 +100,10 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
 
     // is_routed 特征
     int isRouted = 0;
-    if (outerNetIdxRemaining != nullptr
-        && find(outerNetIdxRemaining->begin(), outerNetIdxRemaining->end(), outerIndex)
-               == outerNetIdxRemaining->end()) {
-      isRouted = 1; // 仅当该线网 ID 不在待布网络列表 outerNetIdxRemaining 中时，才认为它已经被布过
+    if (unroutedOuterIds != nullptr
+        && find(unroutedOuterIds->begin(), unroutedOuterIds->end(), outerIndex)
+               == unroutedOuterIds->end()) {
+      isRouted = 1; // 仅当该线网 ID 不在待布网络列表 unroutedOuterIds 中时，才认为它已经被布过
     }
     nodeProperty->add_values(isRouted);
   }

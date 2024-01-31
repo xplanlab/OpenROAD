@@ -1740,8 +1740,8 @@ void FlexDRWorker::identifyCongestionLevel()
   }
 }
 
-int FlexDRWorker::queryNetOrderWithGrid(vector<unsigned int> outerNetIdxRemaining,
-                                        vector<unsigned int> outerNetIdxRouted)
+int FlexDRWorker::queryNetOrderWithGrid(vector<unsigned int> unroutedOuterIds,
+                                        vector<unsigned int> routedOuterIds)
 {
   openroad_api::net_ordering::Message msg;
   openroad_api::net_ordering::Request* req = msg.mutable_request();
@@ -1749,13 +1749,11 @@ int FlexDRWorker::queryNetOrderWithGrid(vector<unsigned int> outerNetIdxRemainin
   // 获取 gridGraph 的数据
   gridGraph_.dump(req);
 
-  req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
-                                 outerNetIdxRemaining.end()});
+  req->mutable_nets()->CopyFrom({unroutedOuterIds.begin(), unroutedOuterIds.end()});
 
-  req->mutable_routed_nets()->CopyFrom({outerNetIdxRouted.begin(),
-                                        outerNetIdxRouted.end()});
+  req->mutable_routed_nets()->CopyFrom({routedOuterIds.begin(), routedOuterIds.end()});
 
-  if (outerNetIdxRemaining.empty()) {
+  if (unroutedOuterIds.empty()) {
     req->set_is_done(true);
   }
 
@@ -1765,7 +1763,7 @@ int FlexDRWorker::queryNetOrderWithGrid(vector<unsigned int> outerNetIdxRemainin
 
   int selectedNetIdx;
 
-  if (outerNetIdxRemaining.empty()) {
+  if (unroutedOuterIds.empty()) {
     logger_->info(DRT, 994, "Sending done message...");
     mq.request(reqStr);
     return -1;
@@ -1783,12 +1781,12 @@ int FlexDRWorker::queryNetOrderWithGrid(vector<unsigned int> outerNetIdxRemainin
       } else if (selectedNetIdx == -1) {
         logger_->info(DRT, 986, "Outer thinks it has finished ordering.");
 
-        for (auto netId : outerNetIdxRemaining) {
+        for (auto netId : unroutedOuterIds) {
           logger_->info(DRT,
                         984,
                         "Outer net index {} remains, name {}.",
                         netId,
-                        outerNetMap_[netId]->getFrNet()->getName());
+                        outerIdToNet_[netId]->getFrNet()->getName());
         }
 
         return -1;
@@ -1807,57 +1805,62 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
   // 单步的训练模式或推断模式
   if (debugSettings_->netOrderingTraining == 1 || debugSettings_->netOrderingEvaluation == 1) {
-    // 待布网络下标
-    vector<unsigned int> outerNetIdxRemaining;
-    // 已布网络下标
-    vector<unsigned int> outerNetIdxRouted;
-    // 外部 ID 与 netEntry 的映射
-    map<unsigned int, RouteQueueEntry> outerNetEntryMap;  // <outerId, entry>
+    // 待布网络的外部 ID
+    vector<unsigned int> unroutedOuterIds;
+    // 已布网络的外部 ID
+    vector<unsigned int> routedOuterIds;
+    // 外部 ID 与 RouteQueueEntry 的映射
+    map<unsigned int, RouteQueueEntry> outerIdToRouteQueueEntry;  // <outerId, routeQueueEntry>
     // 外部 ID 与 net 的映射
-    map<unsigned int, drNet*> outerNetMap;  // <outerId, net>
+    map<unsigned int, drNet*> outerIdToNet;  // <outerId, net>
 
-    // 把 rerouteQueue 中的所有 #pin > 1 的网络放入 outerNetIdxRemaining
-    int outerNetIdx = 0;
+    // 把 rerouteQueue 中的所有 #pin > 1 的网络放入 unroutedOuterIds
+    int idIndex = 0;
     while (!rerouteQueue.empty()) {
       auto& entry = rerouteQueue.front();
-      drNet* net = static_cast<drNet*>(entry.block);
+      bool doRoute = entry.doRoute;
 
-      if (net->getPins().size() > 1) {
-        outerNetIdxRemaining.push_back(outerNetIdx);
-        outerNetEntryMap[outerNetIdx] = entry;
-        outerNetMap[outerNetIdx] = net;
-        outerNetIdx++;
+      if (doRoute) {  // 留意这个判断会不会导致 checkConnectivity 失败
+        auto net = static_cast<drNet*>(entry.block);
+
+        if (net->getPins().size() > 1) {
+          unroutedOuterIds.push_back(idIndex);
+          outerIdToRouteQueueEntry[idIndex] = entry;
+          outerIdToNet[idIndex] = net;
+          idIndex++;
+        }
       }
 
       rerouteQueue.pop();
     }
-    // 把 outerNetMap 保存到 worker 成员中，方便在 drWorker 内任意地方使用，或者通过 drWorker_ 变量来使用，比如 Custom::queryNetOrderWithGraph
-    setOuterNetMap(outerNetMap);
+
+    // 把 outerIdToNet 保存到 worker 成员中，方便在 drWorker 内任意地方使用
+    setOuterIdToNet(outerIdToNet);
 
     while (true) {
       if (debugSettings_->skipReroute) {
         // 如果是跳过拆线重布，则所有待布网络布完一遍就可以结束
-        if (outerNetIdxRemaining.empty()) {
+        if (unroutedOuterIds.empty()) {
           break;
         }
       } else {
         // 如果是启用了拆线重布，则等所有待布网络步过一次后转到 rerouteQueue 流程，直至 rerouteQueue 为空
-        if (outerNetIdxRemaining.empty() && rerouteQueue.empty()) {
+        if (unroutedOuterIds.empty() && rerouteQueue.empty()) {
           break;
         }
       }
 
       RouteQueueEntry entry;
-      if (!outerNetIdxRemaining.empty()) {
+      if (!unroutedOuterIds.empty()) {
         // 当初始线网还没排完序，就继续调用算法接口获取排序
 
         int selectedNetIdx = -1;
 
         if (debugSettings_->graphMode == 1) {
           // 单步的 graph 模式
-          selectedNetIdx = Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &outerNetIdxRemaining);
+          selectedNetIdx = Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &unroutedOuterIds);
         } else {
-          selectedNetIdx = queryNetOrderWithGrid(outerNetIdxRemaining, outerNetIdxRouted);
+          selectedNetIdx = queryNetOrderWithGrid(unroutedOuterIds, routedOuterIds);
         }
 
         // 一旦接收到 -1 就强制跳过布线流程
@@ -1866,21 +1869,21 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
         }
 
         // 加入已布网络列表
-        outerNetIdxRouted.push_back(selectedNetIdx);
+        routedOuterIds.push_back(selectedNetIdx);
 
         // 从待布网络列表中移除
-        auto it = std::find(outerNetIdxRemaining.begin(),
-                            outerNetIdxRemaining.end(),
+        auto it = std::find(
+            unroutedOuterIds.begin(), unroutedOuterIds.end(),
                             selectedNetIdx);
-        if (it != outerNetIdxRemaining.end()) {
-          outerNetIdxRemaining.erase(it);
+        if (it != unroutedOuterIds.end()) {
+          unroutedOuterIds.erase(it);
         }
 
         // 从映射中获取 entry
-        if (outerNetEntryMap.find(selectedNetIdx) == outerNetEntryMap.end()) {
-          logger_->error(DRT, 10061, "Error: cannot find net index {} in outerNetEntryMap", selectedNetIdx);
+        if (outerIdToRouteQueueEntry.find(selectedNetIdx) == outerIdToRouteQueueEntry.end()) {
+          logger_->error(DRT, 10061, "Error: cannot find net index {} in outerIdToRouteQueueEntry", selectedNetIdx);
         }
-        entry = outerNetEntryMap[selectedNetIdx];
+        entry = outerIdToRouteQueueEntry[selectedNetIdx];
       } else {
         // 如果初始线网已排完序，就从队列依次获取线网，即转到 rerouteQueue 流程
         entry = rerouteQueue.front();
@@ -2034,9 +2037,9 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
     // 如果是在单步模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
     if (debugSettings_->netOrderingTraining == 1) {
-      queryNetOrderWithGrid(outerNetIdxRemaining, outerNetIdxRouted);
+      queryNetOrderWithGrid(unroutedOuterIds, routedOuterIds);
     } else if (debugSettings_->netOrderingEvaluation == 1) {
-      Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &outerNetIdxRemaining);
+      Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &unroutedOuterIds);
     }
   } else {
     int initNetCnt = rerouteQueue.size();
@@ -2054,10 +2057,10 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
     // 用于记录指标增量
     map<unsigned int, vector<unsigned long>> metricsDeltaMap;
-    map<drNet*, unsigned int> getOuterNetMapReverse;
-    for (const auto& [outerIndex, net] : getOuterNetMap()) {
+    map<drNet*, unsigned int> netToOuterId; // <net, outerId>
+    for (const auto& [outerIndex, net] : getOuterIdToNet()) {
       metricsDeltaMap[outerIndex] = {0, 0, 0};
-      getOuterNetMapReverse[net] = outerIndex;
+      netToOuterId[net] = outerIndex;
     }
     int lastViolationCount = 0;
     gcWorker_->resetTargetNet();
@@ -2232,7 +2235,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
         // 每完成一个网络的布线（不包含拆线重布）就记录指标增量
         if (finishedNetCntForMetricsDelta <= initNetCnt) {
           auto net = static_cast<drNet*>(obj);
-          unsigned int outerNetIdx = getOuterNetMapReverse[net];
+          unsigned int outerId = netToOuterId[net];
 
           unsigned long violation = 0;
           unsigned long wireLength = 0;
@@ -2264,13 +2267,13 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
             }
           }
 
-          // 注意要判断 metricsDeltaMap[outerNetIdx] 是否为空，因为有些布局只有一个网络，
+          // 注意要判断 metricsDeltaMap[outerId] 是否为空，因为有些布局只有一个网络，
           // 为了节省时间我设计成不询问算法端，因此 getOuterNetMap() 会为空，从而导致
           // metricsDeltaMap 为空。
-          if (metricsDeltaMap.find(outerNetIdx) != metricsDeltaMap.end()) {
-            metricsDeltaMap[outerNetIdx][0] = violation - lastViolationCount;
-            metricsDeltaMap[outerNetIdx][1] = wireLength;
-            metricsDeltaMap[outerNetIdx][2] = via;
+          if (metricsDeltaMap.find(outerId) != metricsDeltaMap.end()) {
+            metricsDeltaMap[outerId][0] = violation - lastViolationCount;
+            metricsDeltaMap[outerId][1] = wireLength;
+            metricsDeltaMap[outerId][2] = via;
           }
 
           lastViolationCount = violation;
@@ -2281,8 +2284,8 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     // reroute queue 排空后整理指标增量准备输出
     if (debugSettings_->countMetricsDelta) {
       std::string countMetricsDeltaJson = "{";
-      for (auto& [outerNetIdx, metricsDelta] : metricsDeltaMap) {
-        countMetricsDeltaJson += "\"" + std::to_string(outerNetIdx) + "\":[";
+      for (auto& [outerId, metricsDelta] : metricsDeltaMap) {
+        countMetricsDeltaJson += "\"" + std::to_string(outerId) + "\":[";
         for (auto value : metricsDelta) {
           countMetricsDeltaJson += std::to_string(value) + ",";
         }
@@ -2298,10 +2301,10 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
   // 统计 routed / rerouted 次数
   if (debugSettings_->countRoutedAndRerouted) {
-    // 初始化计数表，从 outerNet 提取待布线网络
+    // 初始化计数表
     map<unsigned int, unsigned int> countMap;
     std::string countMapJson = "{";
-    for (const auto& [outerIndex, net] : getOuterNetMap()) {
+    for (const auto& [outerIndex, net] : getOuterIdToNet()) {
       countMap[outerIndex] = net->getNumReroutes();
       countMapJson += "\"" + std::to_string(outerIndex) + "\":" + std::to_string(net->getNumReroutes()) + ",";
     }

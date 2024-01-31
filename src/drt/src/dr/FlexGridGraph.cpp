@@ -638,9 +638,9 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req, bool graphMod
   unsigned long via = 0;
 
   // 交换 key-value 以便快速查找网络对应的外部下标
-  map<drNet *, unsigned int> outerNetMapExchanged;
-  for (const auto& [key, value] : drWorker_->getOuterNetMap()) {
-    outerNetMapExchanged[value] = key;
+  map<drNet *, unsigned int> netToOuterId;  // <net, outerId>
+  for (const auto& [key, value] : drWorker_->getOuterIdToNet()) {
+    netToOuterId[value] = key;
   }
 
   // 获取当前 drWorker 所有 nets 的信息
@@ -656,7 +656,7 @@ void FlexGridGraph::dump(openroad_api::net_ordering::Request* req, bool graphMod
           int idx = getIdx(mi.x(), mi.y(), mi.z());
           openroad_api::net_ordering::Node* node = req->mutable_nodes(idx);
           node->set_type(openroad_api::net_ordering::ACCESS);
-          node->set_net(outerNetMapExchanged[net.get()]);
+          node->set_net(netToOuterId[net.get()]);
           node->set_pin(pinIdx);
         }
       }

@@ -2583,11 +2583,12 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
 
     // 原顺序为 | routes | checks ，现在为 | checks | routes (#pin < 2) | routes (#pin >= 2)
 
-    // 待布网络下标
-    vector<unsigned int> outerNetIdxRemaining;
-    // 构建外部 net 的索引
-    map<unsigned int, drNet*> outerNetMap;
-    int outerNetIdx = 0;
+    // 待布网络的外部 ID
+    vector<unsigned int> unroutedOuterIds;
+    // 外部 ID 与 net 的映射
+    map<unsigned int, drNet*> outerIdToNet;  // <outerId, net>
+
+    int idIndex = 0;
     for (auto& entry : routes) {
       frBlockObject* obj = entry.block;
       bool doRoute = entry.doRoute;
@@ -2595,9 +2596,9 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
       if (doRoute) {
         auto net = static_cast<drNet*>(obj);
         if (net->getPins().size() > 1) {
-          outerNetIdxRemaining.push_back(outerNetIdx);
-          outerNetMap[outerNetIdx] = net;
-          outerNetIdx++;
+          unroutedOuterIds.push_back(idIndex);
+          outerIdToNet[idIndex] = net;
+          idIndex++;
         } else {
           customOrderRoutes.push_back(entry);
         }
@@ -2607,8 +2608,8 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
     }
 
     // 仅处理有 1 个待布网络以上的情况
-    if (outerNetIdxRemaining.size() > 1) {
-      setOuterNetMap(outerNetMap);
+    if (unroutedOuterIds.size() > 1) {
+      setOuterIdToNet(outerIdToNet);
 
       openroad_api::net_ordering::Message msg;
       openroad_api::net_ordering::Request* req = msg.mutable_request();
@@ -2618,8 +2619,7 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
       // 获取 gridGraph 的数据
       gridGraph_.dump(req, debugSettings_->graphMode == 1);
 
-      req->mutable_nets()->CopyFrom({outerNetIdxRemaining.begin(),
-                                     outerNetIdxRemaining.end()});
+      req->mutable_nets()->CopyFrom({unroutedOuterIds.begin(), unroutedOuterIds.end()});
 
       if (debugSettings_->graphMode == 1) {
         Custom::generateGraph(req, this);
@@ -2645,7 +2645,7 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
                 << routeBox_.yMax() << ")" << std::endl;
 
       std::cout << "Send nets: ";
-      for (auto netIdx : outerNetIdxRemaining) {
+      for (auto netIdx : unroutedOuterIds) {
         std::cout << netIdx << ", ";
       }
       std::cout << std::endl;
@@ -2675,7 +2675,7 @@ void FlexDRWorker::route_queue_init_queue(queue<RouteQueueEntry>& rerouteQueue)
   if (customOrder.size() > 0) {
     logger_->info(DRT, 990, "Applying initial net order...");
     for (auto& netIdx : customOrder) {
-      customOrderRoutes.push_back({outerNetMap_[netIdx], 0, true});
+      customOrderRoutes.push_back({outerIdToNet_[netIdx], 0, true});
     }
 
     routes = customOrderRoutes;
