@@ -1761,7 +1761,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
       auto& entry = rerouteQueue.front();
       bool doRoute = entry.doRoute;
 
-      if (doRoute) {  // ！！！留意这个判断会不会导致 checkConnectivity 失败！！！
+      if (doRoute) {
         auto net = static_cast<drNet*>(entry.block);
 
         if (net->getPins().size() > 1) {

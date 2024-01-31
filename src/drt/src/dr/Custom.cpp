@@ -59,30 +59,14 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
 
   // 遍历所有线网，获取线网特征
   for (const auto& [outerIndex, net] : drWorker->getOuterIdToNet()) {
-    // 因为在启用 rerouteQueue 时，outerIdToNet 中存储的线网数据可能有问题
-    // 所有这里直接通过 net_name 去 drWorker->getNets() 中查找线网的最新状态
-
-    auto netName = net->getFrNet()->getName();
-    const auto& drWorkerNets = drWorker->getNets();
-
-    auto it = std::find_if(
-        drWorkerNets.begin(), drWorkerNets.end(), [&netName](const auto& net) {
-          return net->getFrNet()->getName() == netName;
-        });
-
-    auto targetNet = net;
-    if (it != drWorkerNets.end()) {
-      targetNet = it->get();
-    }
-
-    float pinNum = targetNet->getPins().size();
+    float pinNum = net->getPins().size();
     int accessPointNum = 0;
 
     int xlo = INT_MAX, xhi = INT_MIN, ylo = INT_MAX, yhi = INT_MIN,
         zlo = INT_MAX, zhi = INT_MIN;
 
     // 遍历线网的所有 pin
-    for (auto& pin : targetNet->getPins()) {
+    for (auto& pin : net->getPins()) {
       for (auto& ap : pin->getAccessPatterns()) {
         accessPointNum++;
 
@@ -119,20 +103,17 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
     if (unroutedOuterIds != nullptr
         && find(unroutedOuterIds->begin(), unroutedOuterIds->end(), outerIndex)
                == unroutedOuterIds->end()) {
-      // 仅当该线网 ID 不在待布网络列表 unroutedOuterIds
-      // 中时，才认为它已经被布过
+      // 仅当该线网 ID 不在待布网络列表 unroutedOuterIds 中时，才认为它已经被布过
       isRouted = 1;
     }
     nodeProperty->add_values(isRouted);
   }
 
   // 遍历所有线网，看哪两个线网有重叠
-  // 注意：由于对 drWorker->getOuterNetMap() 使用了 range-based for
-  // loop，所以此时 outerId 是从 0 开始从小到大排序的， 又由于
-  // graph->add_node_properties 是从下标 0
-  // 开始插入的数组，graph->add_edge_connections 也是， 从而
-  // graph->edge_connections 可通过 netRects[outerIndex] 对应回
-  // graph->node_properties 的顺序上
+  // 注意：由于对 drWorker->getOuterNetMap() 使用了 range-based for loop，所以此时
+  // outerId 是从 0 开始从小到大排序的， 又由于 graph->add_node_properties 是从下标 0
+  // 开始插入的数组，graph->add_edge_connections 也是， 从而 graph->edge_connections
+  // 可通过 netRects[outerIndex] 对应回 graph->node_properties 的顺序上
   for (int i = 0; i < netRects.size(); i++) {
     for (int j = i + 1; j < netRects.size(); j++) {
       if (netRects[i].intersects(netRects[j])) {
