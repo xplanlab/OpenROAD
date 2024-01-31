@@ -1740,65 +1740,6 @@ void FlexDRWorker::identifyCongestionLevel()
   }
 }
 
-int FlexDRWorker::queryNetOrderWithGrid(vector<unsigned int> unroutedOuterIds,
-                                        vector<unsigned int> routedOuterIds)
-{
-  openroad_api::net_ordering::Message msg;
-  openroad_api::net_ordering::Request* req = msg.mutable_request();
-
-  // 获取 gridGraph 的数据
-  gridGraph_.dump(req);
-
-  req->mutable_nets()->CopyFrom({unroutedOuterIds.begin(), unroutedOuterIds.end()});
-
-  req->mutable_routed_nets()->CopyFrom({routedOuterIds.begin(), routedOuterIds.end()});
-
-  if (unroutedOuterIds.empty()) {
-    req->set_is_done(true);
-  }
-
-  string reqStr = msg.SerializeAsString();
-  std::string addr = "tcp://" + debugSettings_->apiAddr;
-  utl::MQ mq(addr, debugSettings_->apiTimeout);
-
-  int selectedNetIdx;
-
-  if (unroutedOuterIds.empty()) {
-    logger_->info(DRT, 994, "Sending done message...");
-    mq.request(reqStr);
-    return -1;
-  } else {
-    while (true) {
-      logger_->info(DRT, 997, "Requesting net order...");
-      string res = mq.request(reqStr);
-      msg = openroad_api::net_ordering::Message();
-      msg.ParseFromString(res);
-
-      selectedNetIdx = msg.response().net_index();
-      if (selectedNetIdx >= 0 && selectedNetIdx < nets_.size()) {
-        logger_->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
-        break;
-      } else if (selectedNetIdx == -1) {
-        logger_->info(DRT, 986, "Outer thinks it has finished ordering.");
-
-        for (auto netId : unroutedOuterIds) {
-          logger_->info(DRT,
-                        984,
-                        "Outer net index {} remains, name {}.",
-                        netId,
-                        outerIdToNet_[netId]->getFrNet()->getName());
-        }
-
-        return -1;
-      } else {
-        logger_->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
-      }
-    }
-
-    return selectedNetIdx;
-  }
-}
-
 void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 {
   auto& workerRegionQuery = getWorkerRegionQuery();
@@ -1814,13 +1755,13 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
     // 外部 ID 与 net 的映射
     map<unsigned int, drNet*> outerIdToNet;  // <outerId, net>
 
-    // 把 rerouteQueue 中的所有 #pin > 1 的网络放入 unroutedOuterIds
+    // 把 rerouteQueue 中的所有 #pin > 1 的待布网络放入 unroutedOuterIds
     int idIndex = 0;
     while (!rerouteQueue.empty()) {
       auto& entry = rerouteQueue.front();
       bool doRoute = entry.doRoute;
 
-      if (doRoute) {  // 留意这个判断会不会导致 checkConnectivity 失败
+      if (doRoute) {  // ！！！留意这个判断会不会导致 checkConnectivity 失败！！！
         auto net = static_cast<drNet*>(entry.block);
 
         if (net->getPins().size() > 1) {
@@ -1860,7 +1801,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
           // 单步的 graph 模式
           selectedNetIdx = Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &unroutedOuterIds);
         } else {
-          selectedNetIdx = queryNetOrderWithGrid(unroutedOuterIds, routedOuterIds);
+          selectedNetIdx = Custom::queryNetOrderWithGrid(this, debugSettings_, logger_, &unroutedOuterIds, &routedOuterIds);
         }
 
         // 一旦接收到 -1 就强制跳过布线流程
@@ -2037,7 +1978,7 @@ void FlexDRWorker::route_queue_main(queue<RouteQueueEntry>& rerouteQueue)
 
     // 如果是在单步模式下已经完成布线（待布网络数量为 0 也算布线完成），则发送 done 消息
     if (debugSettings_->netOrderingTraining == 1) {
-      queryNetOrderWithGrid(unroutedOuterIds, routedOuterIds);
+      Custom::queryNetOrderWithGrid(this, debugSettings_, logger_, &unroutedOuterIds, &routedOuterIds);
     } else if (debugSettings_->netOrderingEvaluation == 1) {
       Custom::queryNetOrderWithGraph(this, debugSettings_, logger_, &unroutedOuterIds);
     }

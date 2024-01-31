@@ -103,15 +103,17 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
     if (unroutedOuterIds != nullptr
         && find(unroutedOuterIds->begin(), unroutedOuterIds->end(), outerIndex)
                == unroutedOuterIds->end()) {
-      isRouted = 1; // 仅当该线网 ID 不在待布网络列表 unroutedOuterIds 中时，才认为它已经被布过
+      // 仅当该线网 ID 不在待布网络列表 unroutedOuterIds 中时，才认为它已经被布过
+      isRouted = 1;
     }
     nodeProperty->add_values(isRouted);
   }
 
   // 遍历所有线网，看哪两个线网有重叠
-  // 注意：由于对 drWorker->getOuterNetMap() 使用了 range-based for loop，所以此时 outerId 是从 0 开始从小到大排序的，
-  // 又由于 graph->add_node_properties 是从下标 0 开始插入的数组，graph->add_edge_connections 也是，
-  // 从而 graph->edge_connections 可通过 netRects[outerIndex] 对应回 graph->node_properties 的顺序上
+  // 注意：由于对 drWorker->getOuterNetMap() 使用了 range-based for loop，所以此时
+  // outerId 是从 0 开始从小到大排序的， 又由于 graph->add_node_properties 是从下标 0
+  // 开始插入的数组，graph->add_edge_connections 也是， 从而 graph->edge_connections
+  // 可通过 netRects[outerIndex] 对应回 graph->node_properties 的顺序上
   for (int i = 0; i < netRects.size(); i++) {
     for (int j = i + 1; j < netRects.size(); j++) {
       if (netRects[i].intersects(netRects[j])) {
@@ -138,4 +140,70 @@ void Custom::generateGraph(openroad_api::net_ordering::Request* req,
   //    }
   //    cout << endl;
   //  }
+}
+
+int Custom::queryNetOrderWithGrid(FlexDRWorker* drWorker,
+                          frDebugSettings* debugSettings,
+                          Logger* logger,
+                          vector<unsigned int>* unroutedOuterIds,
+                          vector<unsigned int>* routedOuterIds)
+{
+  openroad_api::net_ordering::Message msg;
+  openroad_api::net_ordering::Request* req = msg.mutable_request();
+
+  // 获取 gridGraph 的数据
+  FlexGridGraph gridGraph_ = drWorker->getGridGraph();
+  gridGraph_.dump(req, true);
+
+  req->mutable_nets()->CopyFrom(
+      {unroutedOuterIds->begin(), unroutedOuterIds->end()});
+
+  req->mutable_routed_nets()->CopyFrom(
+      {routedOuterIds->begin(), routedOuterIds->end()});
+
+  if (unroutedOuterIds->empty()) {
+    req->set_is_done(true);
+  }
+
+  string reqStr = msg.SerializeAsString();
+  std::string addr = "tcp://" + debugSettings->apiAddr;
+  utl::MQ mq(addr, debugSettings->apiTimeout);
+
+  int selectedNetIdx;
+
+  if (unroutedOuterIds->empty()) {
+    logger->info(DRT, 994, "Sending done message...");
+    mq.request(reqStr);
+    return -1;
+  } else {
+    while (true) {
+      logger->info(DRT, 997, "Requesting net order...");
+      string res = mq.request(reqStr);
+      msg = openroad_api::net_ordering::Message();
+      msg.ParseFromString(res);
+
+      selectedNetIdx = msg.response().net_index();
+      if (selectedNetIdx >= 0 && selectedNetIdx < drWorker->getNets().size()) {
+        logger->info(DRT, 995, "Selected net index {}.", selectedNetIdx);
+        break;
+      } else if (selectedNetIdx == -1) {
+        logger->info(DRT, 986, "Outer thinks it has finished ordering.");
+
+        for (auto netId : *unroutedOuterIds) {
+          logger->info(
+              DRT,
+              984,
+              "Outer net index {} remains, name {}.",
+              netId,
+              drWorker->getOuterIdToNet()[netId]->getFrNet()->getName());
+        }
+
+        return -1;
+      } else {
+        logger->info(DRT, 993, "Invalid net index {}.", selectedNetIdx);
+      }
+    }
+
+    return selectedNetIdx;
+  }
 }

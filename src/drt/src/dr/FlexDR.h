@@ -752,7 +752,6 @@ class FlexDRWorker
   void setUsedPoints(openroad_api::net_ordering::Request* req,
                             FlexMazeIdx beginMazeIdx,
                             FlexMazeIdx endMazeIdx);
-  int queryNetOrderWithGrid(vector<unsigned int> unroutedOuterIds, vector<unsigned int> routedOuterIds);
 
   // route_queue
   void route_queue();
